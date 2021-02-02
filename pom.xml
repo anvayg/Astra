@@ -7,9 +7,8 @@
   <dependencies>
   	<dependency>
   		<groupId>cs.wisc.edu</groupId>
-  		<artifactId>symbolicautomata</artifactId>
+  		<artifactId>models</artifactId>
   		<version>1.0</version>
-  		<type>pom</type>
   	</dependency>
   </dependencies>
 </project>
