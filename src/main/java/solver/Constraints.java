@@ -13,20 +13,25 @@ import theory.characters.*;
 public class Constraints {
 	
 	/**
-	 * Transducer constraints: uninterpreted functions d, f and x 
-	 * 
+	 * Transducer constraints: functions d, f and x
 	 * @param ctx
-	 * @throws TimeoutException 
+	 * @param solver
+	 * @param alphabet
+	 * @param source
+	 * @param target
+	 * @param numStates
+	 * @param ba
+	 * @return
+	 * @throws TimeoutException
 	 */
-	public void transducerConstraints(Context ctx, HashMap<Character, Integer> alphabet, 
+	@SuppressWarnings("unchecked")
+	public static Solver transducerConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
 		Sort B = ctx.getBoolSort();
-		
-		Solver solver = ctx.mkSolver();
 		
 		/* declare d : Q x \Sigma' x \Sigma' x Q-> {1, 0} */
 		Sort[] argsToD = new Sort[]{ I, I, I, I };
@@ -80,6 +85,9 @@ public class Constraints {
 				}
 			}
 		}
+		
+		/* debug */
+		System.out.println(solver.toString());
 		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
 		Sort[] argsToX = new Sort[]{ I, I, I };
@@ -141,7 +149,38 @@ public class Constraints {
 			}
 		}
 		
+		/* debug */
+		System.out.println(solver.toString());
 		
+		/* declare f : Q -> {0, 1} */
+		FuncDecl<Sort> f = ctx.mkFuncDecl("f", I, B);
+		
+		for (int i = 0; i < numStates; i++) {
+			for (Integer sourceState : source.getFinalStates()) {
+				for (Integer targetState : target.getFinalStates()) {
+					Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
+					Expr<IntSort> stateInt = ctx.mkInt(i);
+					Expr<IntSort> targetInt = ctx.mkInt(targetState);
+					
+					Expr antecedent = x.apply(sourceInt, stateInt, targetInt);
+					Expr consequent = f.apply(stateInt);
+					Expr c = ctx.mkImplies(antecedent, consequent);
+					solver.add(c);
+				}
+			}
+		}
+		
+		/* debug */
+		System.out.println(solver.toString());
+		
+		return solver;
 	}
+	
+	/* TODO */
+	public static Solver costConstraints(Context ctx, Solver solver, int numStates) {
+		
+		return solver;
+	}
+	
 	
 }
