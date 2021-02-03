@@ -181,14 +181,14 @@ public class Constraints {
 		System.out.println(solver.toString());
 		
 		/* constraints for each example string */
-		int i = 0;
+		int k = 0;
 		for (Pair<String, String> example : ioExamples) {
 			String inputString = example.first;
 			String outputString = example.second;
 			
-			/* declare s_i */
+			/* declare s_i : N x N x Q -> {0, 1} */
 			Sort[] argsToS = new Sort[]{ I, I, I };
-			String funcName = "s_" + Integer.toString(i);
+			String funcName = "s_" + Integer.toString(k);
 			FuncDecl<Sort> s = ctx.mkFuncDecl(funcName, argsToS, B);
 			
 			/* 0-th index */
@@ -198,12 +198,51 @@ public class Constraints {
 				solver.add(c);
 			}
 			
-			/* TODO incrementing */
-			for (int j = 0; j < inputString.length() - 1; j++) {
-				for (int k = 0; k < outputString.length() - 1; k++) {
-					
+			/* incrementing */
+			for (int q1 = 0; q1 < numStates; q1++) {
+				for (int q2 = 0; q2 < numStates; q2++) {
+					for (int i = 0; i < inputString.length() - 1; i++) {
+						for (int j = 0; j < outputString.length() - 1; j++) {
+							Expr<IntSort> inputPosition = ctx.mkInt(i);
+							Expr<IntSort> outputPosition = ctx.mkInt(j);
+							Expr<IntSort> nextInputPosition = ctx.mkInt(i + 1);
+							Expr<IntSort> nextOutputPosition = ctx.mkInt(j + 1);
+							Expr<IntSort> stateFrom = ctx.mkInt(q1);
+							Expr<IntSort> stateTo = ctx.mkInt(q2);
+							
+							/* character at i-th position of inputString */
+							Character ith = inputString.charAt(i);
+							Expr<IntSort> ithInput = ctx.mkInt(alphabet.get(ith));
+							
+							/* character at j-th position of outputString */
+							Character jth = outputString.charAt(j);
+							Expr<IntSort> jthOutput = ctx.mkInt(alphabet.get(jth));
+							
+							Expr sexp = s.apply(inputPosition, outputPosition, stateFrom);
+							Expr dexp = d.apply(stateFrom, ithInput, jthOutput, stateTo);
+							Expr antecedent = ctx.mkAnd(sexp, dexp);
+							Expr consequent = s.apply(nextInputPosition, nextOutputPosition, stateTo);
+							Expr c = ctx.mkImplies(antecedent, consequent);
+							solver.add(c);
+						}
+					}
 				}
 			}
+			
+			/* length of strings --> final state */
+			for (int q = 0; q < numStates; q++) {
+				Expr<IntSort> inputStrLength = ctx.mkInt(inputString.length());
+				Expr<IntSort> outputStrLength = ctx.mkInt(outputString.length());
+				Expr<IntSort> state = ctx.mkInt(q);
+				
+				Expr antecedent = s.apply(inputStrLength, outputStrLength, state);
+				Expr consequent = f.apply(state);
+				Expr c = ctx.mkImplies(antecedent, consequent);
+				solver.add(c);
+			}
+			
+			/* counter */
+			k++;
 		}
 		
 		return solver;
