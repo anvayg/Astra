@@ -2,32 +2,43 @@ package solver;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 import org.sat4j.specs.TimeoutException;
 
-import com.microsoft.z3.*;
-import automata.sfa.*;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
+import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.IntSort;
+import com.microsoft.z3.Solver;
+import com.microsoft.z3.Sort;
+
+import automata.sfa.SFA;
+import automata.sfa.SFAMove;
 import theory.BooleanAlgebra;
-import theory.characters.*;
+import theory.characters.CharPred;
+import utilities.Pair;
 
 public class Constraints {
 	
 	/**
-	 * Transducer constraints: functions d, f and x
+	 * Builds constraints: functions d, f and x
 	 * @param ctx
 	 * @param solver
 	 * @param alphabet
 	 * @param source
 	 * @param target
 	 * @param numStates
+	 * @param ioExamples
 	 * @param ba
 	 * @return
 	 * @throws TimeoutException
 	 */
 	@SuppressWarnings("unchecked")
-	public static Solver transducerConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
+	public static Solver mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
-			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+			List<Pair<String, String>> ioExamples, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
@@ -42,19 +53,6 @@ public class Constraints {
 				for (int k = 0; k < numStates; k++) {
 					for (int a = 0; a < alphabet.size(); a++) {
 						for (int b = 0; b < alphabet.size(); b++) {
-							
-							/* no epsilon-epsilon moves */
-							if (a == alphabet.size() - 1 && b == alphabet.size() - 1) {
-								Expr<IntSort>[] args = new Expr[4];
-								args[0] = ctx.mkInt(i);
-								args[1] = ctx.mkInt(a);
-								args[2] = ctx.mkInt(b);
-								args[3] = ctx.mkInt(j);
-								
-								Expr res = d.apply(args);
-								BoolExpr c1 = ctx.mkNot(res);
-								solver.add(c1);
-							}
 							
 							/* if j & k are the same state */ 
 							if (j == k) continue;
@@ -86,8 +84,21 @@ public class Constraints {
 			}
 		}
 		
-		/* debug */
-		System.out.println(solver.toString());
+		/* no epsilon-epsilon moves */
+		for (int i = 0; i < numStates; i++) {
+			for (int j = 0; j < numStates; j++) {
+				int epsilon = alphabet.size() - 1;
+				Expr<IntSort>[] args = new Expr[4];
+				args[0] = ctx.mkInt(i);
+				args[1] = ctx.mkInt(epsilon);
+				args[2] = ctx.mkInt(epsilon);
+				args[3] = ctx.mkInt(j);
+					
+				Expr res = d.apply(args);
+				BoolExpr c1 = ctx.mkNot(res);
+				solver.add(c1);
+			}
+		}
 		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
 		Sort[] argsToX = new Sort[]{ I, I, I };
@@ -98,7 +109,6 @@ public class Constraints {
 		Expr<IntSort> targetInit = ctx.mkInt(target.getInitialState());
 		Expr<IntSort> init = ctx.mkInt(0);
 		Expr res = x.apply(sourceInit, init, targetInit);
-		// BoolExpr c = ctx.mkEq(res, ctx.mkTrue()); 
 		solver.add(res);
 		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
@@ -149,9 +159,6 @@ public class Constraints {
 			}
 		}
 		
-		/* debug */
-		System.out.println(solver.toString());
-		
 		/* declare f : Q -> {0, 1} */
 		FuncDecl<Sort> f = ctx.mkFuncDecl("f", I, B);
 		
@@ -173,13 +180,38 @@ public class Constraints {
 		/* debug */
 		System.out.println(solver.toString());
 		
+		/* constraints for each example string */
+		int i = 0;
+		for (Pair<String, String> example : ioExamples) {
+			String inputString = example.first;
+			String outputString = example.second;
+			
+			/* declare s_i */
+			Sort[] argsToS = new Sort[]{ I, I, I };
+			String funcName = "s_" + Integer.toString(i);
+			FuncDecl<Sort> s = ctx.mkFuncDecl(funcName, argsToS, B);
+			
+			/* 0-th index */
+			if (!inputString.isEmpty() && !outputString.isEmpty()) {
+				Expr<IntSort> zero = ctx.mkInt(0);
+				Expr c = s.apply(zero, zero, zero);
+				solver.add(c);
+			}
+			
+			/* TODO incrementing */
+			for (int j = 0; j < inputString.length() - 1; j++) {
+				for (int k = 0; k < outputString.length() - 1; k++) {
+					
+				}
+			}
+		}
+		
 		return solver;
 	}
 	
-	/* TODO */
-	public static Solver costConstraints(Context ctx, Solver solver, int numStates) {
+	/* TODO: write function and change return type */
+	public static void mkTransducer(Solver solver) {
 		
-		return solver;
 	}
 	
 	
