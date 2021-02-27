@@ -43,7 +43,14 @@ public class Constraints {
 			Integer key = triple.first;
 			if (transitionsMap.containsKey(key)) {
 				Pair<String, Integer> currentEntry = transitionsMap.get(key);
+				
+				// lower cost
 				if (triple.third < currentEntry.second) {
+					transitionsMap.put(key, new Pair<String, Integer>(triple.second, triple.third));
+				}
+				
+				// prefer shorter string
+				if (triple.third == currentEntry.second && triple.second.length() < currentEntry.first.length()) {
 					transitionsMap.put(key, new Pair<String, Integer>(triple.second, triple.third));
 				}
 			}
@@ -54,9 +61,12 @@ public class Constraints {
 	}
 	
 	// TODO: change return type
-	public static void bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			HashMap<Character, Integer> alphabet, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+	public static Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
+	bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, HashMap<Character, Integer> alphabet, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		
+		Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
+				new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
 		Collection<Integer> sourceStates = source.getStates();
 		Collection<Integer> targetStates = target.getStates();
 		
@@ -69,56 +79,94 @@ public class Constraints {
 					Character input = sourceTransition.getWitness(ba);
 					
 					// Pre-insert 
-					// Try implementing with a HashMap: Successor State in Target --> (Output String, Cost)
-					HashMap<Integer, Pair<String, Integer>> outputTransitions = new HashMap<Integer, Pair<String, Integer>>();
-					HashMap<Integer, Pair<String, Integer>> outputTransitionsOld = 
-							(HashMap<Integer, Pair<String, Integer>>) outputTransitions.clone();
-					
-					while (!outputTransitions.equals(outputTransitionsOld)) {
-						outputTransitionsOld = (HashMap<Integer, Pair<String, Integer>>) outputTransitions.clone();
+					Set<Triple<Integer, String, Integer>> triples = new HashSet<Triple<Integer, String, Integer>>();
+					Set<Triple<Integer, String, Integer>> triplesOld = new HashSet<Triple<Integer, String, Integer>>();
+					while (!triples.equals(triplesOld)) {
+						triplesOld.clear();
+						triplesOld.addAll(triples);
 						
-						for (Entry<Integer, Pair<String, Integer>> entry : outputTransitionsOld.entrySet()) {
+						for (Triple<Integer, String, Integer> triple : triplesOld) {
 							for (Character output : alphabet.keySet()) {
-								Integer targetTo = SFAOperations.getSuccessorState(target, entry.getKey(), output, ba);
-								String newString = entry.getValue().first + output;
-								Integer newCost = entry.getValue().second + 1;
+								Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, output, ba);
+								String newString = triple.second + output;
+								Integer newCost = triple.third + 1;
 								
-								if (outputTransitions.containsKey(targetTo)) {
-									Pair<String, Integer> currentEntry = outputTransitions.get(targetTo);
-									if (newCost < currentEntry.second) {
-										outputTransitions.put(targetTo, new Pair<String, Integer>(newString, newCost));
-									}
-								} 
-								else {
-									outputTransitions.put(targetTo, new Pair<String, Integer>(newString, newCost));
-								}
+								triples.add(new Triple<Integer, String, Integer>(targetTo, newString, newCost));
 							}
 						}
+						triples = mapToTriples(triplesToMap(triples));
 					}
 					
-					Set<Triple<Integer, String, Integer>> triples = mapToTriples(outputTransitions);
+					
 					Set<Triple<Integer, String, Integer>> newTriples = new HashSet<Triple<Integer, String, Integer>>();
 					
 					// To copy or not to copy
 					for (Triple<Integer, String, Integer> triple : triples) {
+						Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, input, ba);
+						String newString = triple.second + input;
 						
+						newTriples.add(new Triple<Integer, String, Integer>(targetTo, newString, triple.third));
+						
+						newTriples.add(new Triple<Integer, String, Integer>(triple.first, triple.second, triple.third + 1));
 					}
 					
+					triples.clear();
+					triples.addAll(newTriples);
 					
 					// Modifying the input character 
 					for (Character output : alphabet.keySet()) {
 						if (output == input) continue;
 						
-						// else
+						for (Triple<Integer, String, Integer> triple : newTriples) {
+							Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, output, ba);
+							String newString = triple.second + output;
+							Integer newCost = triple.third + 1;
+							
+							triples.add(new Triple<Integer, String, Integer>(targetTo, newString, newCost));
+						}
+					}
+					
+					// Post-insert
+					while (!triples.equals(triplesOld)) {
+						triplesOld.clear();
+						triplesOld.addAll(triples);
+						
+						for (Triple<Integer, String, Integer> triple : triplesOld) {
+							for (Character output : alphabet.keySet()) {
+								Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, output, ba);
+								String newString = triple.second + output;
+								Integer newCost = triple.third + 1;
+								
+								triples.add(new Triple<Integer, String, Integer>(targetTo, newString, newCost));
+							}
+						}
+						triples = mapToTriples(triplesToMap(triples));
+					}
+					
+					// Add to transitions
+					for (Triple<Integer, String, Integer> triple : triples) {
+						if (!source.isFinalState(sourceTo) && target.isFinalState(triple.first)) continue;
+						
+						Pair<Integer, Integer> sourcePair = new Pair<Integer, Integer>(sourceState, targetState);
+						Triple<Character, String, Integer> move = new Triple<Character, String, Integer>(input, triple.second, triple.third);
+						Pair<Integer, Integer> targetPair = new Pair<Integer, Integer>(sourceTo, triple.first);
+						Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> newTransition =
+								new Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>(sourcePair, move, targetPair);
 					}
 					
 				}
 			}
 		}
+		
+		return transitions;
+	}
+	
+	public static void mkInjectiveMap() {
+		
 	}
 	
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static Solver mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
 			List<Pair<String, String>> ioExamples, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
