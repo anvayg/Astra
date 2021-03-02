@@ -23,8 +23,9 @@ import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import utilities.Pair;
 import solver.Constraints;
+import solver.ConstraintsEpsilon;
 
-public class z3test {
+public class Z3test {
 	
 	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	
@@ -47,6 +48,7 @@ public class z3test {
 		List<Integer> finStates02 = new LinkedList<Integer>();
 		finStates02.add(1);
 		mySFA02 = SFA.MkSFA(transitions02, 0, finStates02, ba);
+		// mySFA02 = mySFA02.mkTotal(ba);
 		
 		// SFA0.3: SFA that reads aa
 		List<SFAMove<CharPred, Character>> transitions03 = new LinkedList<SFAMove<CharPred, Character>>();
@@ -96,7 +98,7 @@ public class z3test {
 		int numStates = 2;
 		
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		solver = Constraints.mkConstraints(ctx, solver, alphabetMap, mySFA01, mySFA02, 
+		solver = ConstraintsEpsilon.mkConstraints(ctx, solver, alphabetMap, mySFA01, mySFA02, 
 				numStates, empty, ba);
 	}
 	
