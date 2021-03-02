@@ -62,7 +62,7 @@ public class Constraints {
 	
 	// TODO: change return type
 	public static Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
-	bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, HashMap<Character, Integer> alphabet, 
+	bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, Set<Character> alphabet, 
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		
 		Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
@@ -86,7 +86,7 @@ public class Constraints {
 						triplesOld.addAll(triples);
 						
 						for (Triple<Integer, String, Integer> triple : triplesOld) {
-							for (Character output : alphabet.keySet()) {
+							for (Character output : alphabet) {
 								Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, output, ba);
 								String newString = triple.second + output;
 								Integer newCost = triple.third + 1;
@@ -114,7 +114,7 @@ public class Constraints {
 					triples.addAll(newTriples);
 					
 					// Modifying the input character 
-					for (Character output : alphabet.keySet()) {
+					for (Character output : alphabet) {
 						if (output == input) continue;
 						
 						for (Triple<Integer, String, Integer> triple : newTriples) {
@@ -132,7 +132,7 @@ public class Constraints {
 						triplesOld.addAll(triples);
 						
 						for (Triple<Integer, String, Integer> triple : triplesOld) {
-							for (Character output : alphabet.keySet()) {
+							for (Character output : alphabet) {
 								Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, output, ba);
 								String newString = triple.second + output;
 								Integer newCost = triple.third + 1;
@@ -161,8 +161,20 @@ public class Constraints {
 		return transitions;
 	}
 	
-	public static void mkInjectiveMap() {
+	public static HashMap<String, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions) {
+		HashMap<String, Integer> outputInjMap = new HashMap<String, Integer>();
+		int counter = 0;
 		
+		for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : transitions) {
+			String outputStr = transition.second.second;
+			
+			if (outputInjMap.containsKey(outputStr)) continue;
+			
+			outputInjMap.put(outputStr, counter);
+			counter++;
+		}
+		
+		return outputInjMap;
 	}
 	
 	
