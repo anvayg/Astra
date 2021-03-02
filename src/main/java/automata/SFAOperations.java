@@ -1,6 +1,8 @@
 package automata;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 
 import org.sat4j.specs.TimeoutException;
 
@@ -22,13 +24,67 @@ public class SFAOperations {
 		
 		// assumes disjoint and total set of transitions (minterm reduced)
 		for (SFAMove<CharPred, Character> transition : transitions) {
-			Character witness = transition.getWitness(ba);
-			if (witness == move) {
+			if (transition.hasModel(move, ba)) {
 				return transition.to;
 			}
 		}
 		
-		// should be unreachable
-		return 0;
+		// should be unreachable if total
+		return -1;
 	}
+	
+	/*
+	 * Similar to getSuccessorState but check whether transition is present
+	 */
+	public static boolean hasTransition(SFA<CharPred, Character> aut, Integer state, Character move, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Collection<SFAMove<CharPred, Character>> transitions = aut.getTransitionsFrom(state);
+		
+		// assumes disjoint and total set of transitions (minterm reduced)
+		for (SFAMove<CharPred, Character> transition : transitions) {
+			if (transition.hasModel(move, ba)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	// Assume aut1 and aut2 have transitions labeled with single characters
+	public static HashSet<Character> alphabetSet(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2,
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		HashSet<Character> alphabet = new HashSet<Character>();
+		Collection<SFAMove<CharPred, Character>> transitions1 = aut1.getTransitions();
+		Collection<SFAMove<CharPred, Character>> transitions2 = aut2.getTransitions();
+		
+		for (SFAMove<CharPred, Character> transition : transitions1) {
+			Character label = transition.getWitness(ba);
+			alphabet.add(label);
+		}
+		
+		for (SFAMove<CharPred, Character> transition : transitions2) {
+			Character label = transition.getWitness(ba);
+			alphabet.add(label);
+		}	
+		
+		alphabet.add(Character.MIN_VALUE); // use for empty
+		return alphabet;
+	}
+	
+	public static SFA<CharPred, Character> mkTotalFinite(SFA<CharPred, Character> aut, Collection<Character> alphabet, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
+		int sinkState = aut.getMaxStateId() + 1;
+		
+		for (Integer state : aut.getStates()) {
+			for (Character c : alphabet) {
+				if (!hasTransition(aut, state, c, ba)) {
+					transitions.add(new SFAInputMove<CharPred, Character>(state, sinkState, ba.MkAtom(c)));
+				}
+			}
+		}
+		
+		return SFA.MkSFA(transitions, aut.getInitialState(), aut.getFinalStates(), ba, false);
+	}
+	
+	
 }
