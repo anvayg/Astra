@@ -60,7 +60,6 @@ public class Constraints {
 		return transitionsMap;
 	}
 	
-	// TODO: change return type
 	public static Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
 	bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, Set<Character> alphabet, 
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
@@ -209,10 +208,56 @@ public class Constraints {
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		Collection <SFAMove<CharPred, Character>> targetTransitions = target.getTransitions();
 		
+		/* set of finite outputs */
+		Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
+				bestOutputs(source, target, alphabet.keySet(), ba);
+		
+		/* map */
+		HashMap<String, Integer> outputMap = mkInjectiveMap(outputs);
+		
 		/* x function constraints */
 		for (int i = 0; i < numStates; i++) {
 			for (int j = 0; j < numStates; j++) {
 				// TODO
+				for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : outputs) {
+					/* pair of source states */
+					Pair<Integer, Integer> sourcePair = transition.first;
+					Expr<IntSort> qR = ctx.mkInt(sourcePair.first);
+					Expr<IntSort> q1 = ctx.mkInt(i);
+					Expr<IntSort> qT = ctx.mkInt(sourcePair.second);
+					
+					Expr x1 = x.apply(qR, q1, qT);
+					
+					/* pair of target states */
+					Pair<Integer, Integer> targetPair = transition.third;
+					Expr<IntSort> qRprime = ctx.mkInt(targetPair.first);
+					Expr<IntSort> q2 = ctx.mkInt(j);
+					Expr<IntSort> qTprime = ctx.mkInt(targetPair.second);
+					
+					Expr x2 = x.apply(qRprime, q2, qTprime);
+					
+					/* input */
+					Character inputChar = transition.second.first;
+					Integer input = alphabet.get(inputChar);
+					Expr<IntSort> a = ctx.mkInt(input);
+					
+					/* output */
+					String outputStr = transition.second.second;
+					Integer output = outputMap.get(outputStr);
+					Expr<IntSort> b = ctx.mkInt(output);
+					
+					/* d expressions */
+					Expr d1exp = d1.apply(q1, a);
+					Expr eq1 = ctx.mkEq(d1exp, b);
+					
+					Expr d2exp = d2.apply(q1, a);
+					Expr eq2 = ctx.mkEq(d2exp, q2);
+					
+					Expr antecedent = ctx.mkAnd(x1, eq1, eq2);
+					Expr c = ctx.mkImplies(antecedent, x2);
+					solver.add(c);
+				}
+				
 			}
 		}
 		
