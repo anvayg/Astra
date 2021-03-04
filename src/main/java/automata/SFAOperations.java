@@ -74,6 +74,7 @@ public class SFAOperations {
 	public static SFA<CharPred, Character> mkTotalFinite(SFA<CharPred, Character> aut, Collection<Character> alphabet, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
 		int sinkState = aut.getMaxStateId() + 1;
+		transitions.addAll(aut.getTransitions());
 		
 		for (Integer state : aut.getStates()) {
 			for (Character c : alphabet) {
@@ -83,7 +84,7 @@ public class SFAOperations {
 			}
 		}
 		
-		return SFA.MkSFA(transitions, aut.getInitialState(), aut.getFinalStates(), ba, false);
+		return SFA.MkSFA(transitions, aut.getInitialState(), aut.getFinalStates(), ba, false, false);
 	}
 	
 	
