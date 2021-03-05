@@ -2,7 +2,9 @@ package automata;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.sat4j.specs.TimeoutException;
 
@@ -71,6 +73,18 @@ public class SFAOperations {
 		return alphabet;
 	}
 	
+	public static HashMap<Character, Integer> mkAlphabetMap(Set<Character> alphabet) {
+		HashMap<Character, Integer> alphabetMap = new HashMap<Character, Integer>();
+		int counter = 0;
+		
+		for (Character sym : alphabet) {
+			alphabetMap.put(sym, counter);
+			counter++;
+		}
+		
+		return alphabetMap;
+	}
+	
 	public static SFA<CharPred, Character> mkTotalFinite(SFA<CharPred, Character> aut, Collection<Character> alphabet, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
 		int sinkState = aut.getMaxStateId() + 1;
@@ -82,6 +96,11 @@ public class SFAOperations {
 					transitions.add(new SFAInputMove<CharPred, Character>(state, sinkState, ba.MkAtom(c)));
 				}
 			}
+		}
+		
+		// self-loop on sinkState
+		for (Character c : alphabet) {
+			transitions.add(new SFAInputMove<CharPred, Character>(sinkState, sinkState, ba.MkAtom(c)));
 		}
 		
 		return SFA.MkSFA(transitions, aut.getInitialState(), aut.getFinalStates(), ba, false, false);
