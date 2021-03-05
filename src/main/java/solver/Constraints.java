@@ -1,9 +1,12 @@
 package solver;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -12,6 +15,8 @@ import org.sat4j.specs.TimeoutException;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.IntExpr;
+import com.microsoft.z3.IntNum;
 import com.microsoft.z3.IntSort;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
@@ -22,7 +27,13 @@ import automata.SFAOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import theory.BooleanAlgebra;
+import theory.BooleanAlgebraSubst;
+import theory.characters.CharConstant;
+import theory.characters.CharFunc;
 import theory.characters.CharPred;
+import transducers.sft.SFT;
+import transducers.sft.SFTInputMove;
+import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.Triple;
 
@@ -181,11 +192,24 @@ public class Constraints {
 		return outputInjMap;
 	}
 	
+	/*
+	 * Reverse injective map
+	 */
+	public static <A, B> HashMap<B, A> reverseMap(HashMap<A, B> map) { 
+		HashMap<B, A> reverseMap = new HashMap<B, A>();
+		
+		for (A key : map.keySet()) {
+			reverseMap.put(map.get(key), key);
+		}
+		
+		return reverseMap;
+	}
+	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static Solver mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
+	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
-			List<Pair<String, String>> ioExamples, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
@@ -324,27 +348,71 @@ public class Constraints {
 		}
 		
 		/* debug */
+		boolean debug = false;
 		System.out.println(solver.toString());
-		if (solver.check() == Status.SATISFIABLE) {
-			Model m = solver.getModel();
-			System.out.println(m.getFuncInterp(x));
-			System.out.println(m.getFuncInterp(d1));
-			System.out.println(m.getFuncInterp(d2));
-			
-			for (int q1 = 0; q1 < numStates; q1++) {
-				for (int a = 0; a < alphabet.size(); a++) {
-					Expr q1Int = ctx.mkInt(q1);
-					Expr move = ctx.mkInt(a);
-					Expr d1exp = d1.apply(q1Int, move);
-					Expr d2exp = d2.apply(q1Int, move);	
-								
-					// System.out.println(q1 + ", " + a + ", " + m.evaluate(d1exp, false));	
+		if (debug) { 
+			if (solver.check() == Status.SATISFIABLE) {
+				Model m = solver.getModel();
+				System.out.println(m.getFuncInterp(x));
+				System.out.println(m.getFuncInterp(d1));
+				System.out.println(m.getFuncInterp(d2));
+				
+				for (int q1 = 0; q1 < numStates; q1++) {
+					for (int a = 0; a < alphabet.size(); a++) {
+						Expr q1Int = ctx.mkInt(q1);
+						Expr move = ctx.mkInt(a);
+						Expr d1exp = d1.apply(q1Int, move);
+						Expr d2exp = d2.apply(q1Int, move);	
+									
+						// System.out.println(q1 + ", " + a + ", " + m.evaluate(d1exp, false));	
+					}
 				}
-			}
-			
+			}		
 		}
 		
 		
-		return solver;
+		/* construct transducer */
+		
+		/* reverse HashMaps */
+		HashMap<Integer, String> reverseOutputMap = reverseMap(outputMap);
+		HashMap<Integer, Character> reverseAlphabet = reverseMap(alphabet);
+		
+		List<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+		
+		if (solver.check() == Status.SATISFIABLE) {
+			Model m = solver.getModel();
+			for (int q1 = 0; q1 < numStates; q1++) {
+				for (int a : alphabet.values()) { 
+					Character input = reverseAlphabet.get(a);
+					Expr q1Int = ctx.mkInt(q1);
+					Expr move = ctx.mkInt(a); 
+					Expr d1exp = d1.apply(q1Int, move);
+					Expr d2exp = d2.apply(q1Int, move);	
+								
+					/* get output */
+					IntNum output = (IntNum) m.evaluate(d1exp, false);
+					int outputInt = output.getInt();
+					String outputStr = reverseOutputMap.get(outputInt);
+					
+					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+					for (int l = 0; l < outputStr.length(); l++) {
+						char c = outputStr.charAt(l);
+						outputFunc.add(new CharConstant(c));
+					}
+						
+					/* get state */
+					IntNum successor = (IntNum) m.evaluate(d2exp, false);
+					int q2 = successor.getInt();
+					
+					transitionsFT.add(new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc));
+				}
+			}
+		}
+		
+		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();
+		SFT<CharPred, CharFunc, Character> mySFT = SFT.MkSFT(transitionsFT, 0, finStates, ba);
+		
+		return mySFT;
 	}
+	
 }
