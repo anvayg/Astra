@@ -13,8 +13,10 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.IntSort;
+import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Sort;
+import com.microsoft.z3.Status;
 
 import automata.SFAOperations;
 import automata.sfa.SFA;
@@ -31,6 +33,7 @@ public class Constraints {
 		for (Entry<Integer, Pair<String, Integer>> entry : transitionsMap.entrySet()) {
 			Triple<Integer, String, Integer> triple = 
 					new Triple<Integer, String, Integer>(entry.getKey(), entry.getValue().first, entry.getValue().second);
+			triples.add(triple);
 		}
 		
 		return triples;
@@ -79,6 +82,7 @@ public class Constraints {
 					
 					// Pre-insert 
 					Set<Triple<Integer, String, Integer>> triples = new HashSet<Triple<Integer, String, Integer>>();
+					triples.add(new Triple<Integer, String, Integer>(targetState, "", 0));
 					Set<Triple<Integer, String, Integer>> triplesOld = new HashSet<Triple<Integer, String, Integer>>();
 					while (!triples.equals(triplesOld)) {
 						triplesOld.clear();
@@ -96,8 +100,8 @@ public class Constraints {
 						triples = mapToTriples(triplesToMap(triples));
 					}
 					
-					
 					Set<Triple<Integer, String, Integer>> newTriples = new HashSet<Triple<Integer, String, Integer>>();
+					newTriples.addAll(triples);
 					
 					// To copy or not to copy
 					for (Triple<Integer, String, Integer> triple : triples) {
@@ -151,6 +155,7 @@ public class Constraints {
 						Pair<Integer, Integer> targetPair = new Pair<Integer, Integer>(sourceTo, triple.first);
 						Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> newTransition =
 								new Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>(sourcePair, move, targetPair);
+						transitions.add(newTransition);
 					}
 					
 				}
@@ -186,6 +191,10 @@ public class Constraints {
 		Sort I = ctx.getIntSort();
 		Sort B = ctx.getBoolSort();
 		
+		Expr<IntSort> numStatesInt = ctx.mkInt(numStates);
+		Expr<IntSort> alphabetSize = ctx.mkInt(alphabet.size());
+		Expr<IntSort> zero = ctx.mkInt(0);
+		
 		/* declare d_1 : Q x \Sigma -> \Sigma^o */
 		Sort[] argsToD1 = new Sort[]{ I, I };
 		FuncDecl<Sort> d1 = ctx.mkFuncDecl("d1", argsToD1, I);
@@ -193,6 +202,24 @@ public class Constraints {
 		/* declare d_2 : Q x \Sigma -> Q */
 		Sort[] argsToD2 = new Sort[]{ I, I };
 		FuncDecl<Sort> d2 = ctx.mkFuncDecl("d2", argsToD2, I);
+		
+		/* d_1 range */
+		for (int i = 0; i < numStates; i++) {
+			for (int a : alphabet.values()) {
+				Expr<IntSort> q1 = ctx.mkInt(i);
+				Expr<IntSort> input = ctx.mkInt(a);
+				Expr d1exp = d1.apply(q1, input);
+				Expr d2exp = d2.apply(q1, input);
+				Expr c1 = ctx.mkLt(d1exp, alphabetSize);
+				Expr c2 = ctx.mkGe(d1exp, zero);
+				solver.add(c1);
+				solver.add(c2);
+				c1 = ctx.mkLt(d2exp, numStatesInt);
+				c2 = ctx.mkGe(d2exp, zero);
+				solver.add(c1);
+				solver.add(c2);
+			}
+		}
 		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
 		Sort[] argsToX = new Sort[]{ I, I, I };
@@ -218,7 +245,6 @@ public class Constraints {
 		/* x function constraints */
 		for (int i = 0; i < numStates; i++) {
 			for (int j = 0; j < numStates; j++) {
-				// TODO
 				for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : outputs) {
 					/* pair of source states */
 					Pair<Integer, Integer> sourcePair = transition.first;
@@ -263,17 +289,19 @@ public class Constraints {
 		
 		/* declare f_R : Q -> {0, 1} */
 		FuncDecl<Sort> f_R = ctx.mkFuncDecl("f_R", I, B);
-		for (Integer sourceState : source.getFinalStates()) {
+		for (Integer sourceState : source.getStates()) {
 			Expr<IntSort> stateInt = ctx.mkInt(sourceState);
 			Expr c = f_R.apply(stateInt);
+			if (!source.isFinalState(sourceState)) c = ctx.mkNot(c);
 			solver.add(c);
 		}
 		
 		/* declare f_T : Q -> {0, 1} */
 		FuncDecl<Sort> f_T = ctx.mkFuncDecl("f_T", I, B);
-		for (Integer targetState : target.getFinalStates()) {
+		for (Integer targetState : target.getStates()) {
 			Expr<IntSort> stateInt = ctx.mkInt(targetState);
 			Expr c = f_T.apply(stateInt);
+			if (!target.isFinalState(targetState)) c = ctx.mkNot(c);
 			solver.add(c);
 		}
 		
@@ -293,6 +321,27 @@ public class Constraints {
 					solver.add(c);
 				}
 			}
+		}
+		
+		/* debug */
+		System.out.println(solver.toString());
+		if (solver.check() == Status.SATISFIABLE) {
+			Model m = solver.getModel();
+			System.out.println(m.getFuncInterp(x));
+			System.out.println(m.getFuncInterp(d1));
+			System.out.println(m.getFuncInterp(d2));
+			
+			for (int q1 = 0; q1 < numStates; q1++) {
+				for (int a = 0; a < alphabet.size(); a++) {
+					Expr q1Int = ctx.mkInt(q1);
+					Expr move = ctx.mkInt(a);
+					Expr d1exp = d1.apply(q1Int, move);
+					Expr d2exp = d2.apply(q1Int, move);	
+								
+					// System.out.println(q1 + ", " + a + ", " + m.evaluate(d1exp, false));	
+				}
+			}
+			
 		}
 		
 		
