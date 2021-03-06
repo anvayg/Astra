@@ -52,6 +52,19 @@ public class SFAOperations {
 		return false;
 	}
 	
+	/*
+	 * Returns state of aut after reading String str
+	 */
+	public static Integer getStateInFA(SFA<CharPred, Character> aut, Integer state, String str, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		for (int i = 0; i < str.length(); i++) {
+			Character move = str.charAt(i);
+			state = getSuccessorState(aut, state, move, ba);
+		}
+		
+		return state;
+	}
+	
 	// Assume aut1 and aut2 have transitions labeled with single characters
 	public static HashSet<Character> alphabetSet(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2,
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {

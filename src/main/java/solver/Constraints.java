@@ -26,6 +26,7 @@ import com.microsoft.z3.Status;
 import automata.SFAOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
+import strings.EditDistanceStrToStr;
 import theory.BooleanAlgebra;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
@@ -39,22 +40,22 @@ import utilities.Triple;
 
 public class Constraints {
 	
-	public static Set<Triple<Integer, String, Integer>> mapToTriples(HashMap<Integer, Pair<String, Integer>> transitionsMap) {
-		Set<Triple<Integer, String, Integer>> triples = new HashSet<Triple<Integer, String, Integer>>();
-		for (Entry<Integer, Pair<String, Integer>> entry : transitionsMap.entrySet()) {
-			Triple<Integer, String, Integer> triple = 
-					new Triple<Integer, String, Integer>(entry.getKey(), entry.getValue().first, entry.getValue().second);
+	public static <A> Set<Triple<A, String, Integer>> mapToTriples(HashMap<A, Pair<String, Integer>> transitionsMap) {
+		Set<Triple<A, String, Integer>> triples = new HashSet<Triple<A, String, Integer>>();
+		for (Entry<A, Pair<String, Integer>> entry : transitionsMap.entrySet()) {
+			Triple<A, String, Integer> triple = 
+					new Triple<A, String, Integer>(entry.getKey(), entry.getValue().first, entry.getValue().second);
 			triples.add(triple);
 		}
 		
 		return triples;
 	}
 	
-	public static HashMap<Integer, Pair<String, Integer>> triplesToMap(Set<Triple<Integer, String, Integer>> triples) {
-		HashMap<Integer, Pair<String, Integer>> transitionsMap = new HashMap<Integer, Pair<String, Integer>>();
+	public static <A> HashMap<A, Pair<String, Integer>> triplesToMap(Set<Triple<A, String, Integer>> triples) {
+		HashMap<A, Pair<String, Integer>> transitionsMap = new HashMap<A, Pair<String, Integer>>();
 		
-		for (Triple<Integer, String, Integer> triple : triples) {
-			Integer key = triple.first;
+		for (Triple<A, String, Integer> triple : triples) {
+			A key = triple.first;
 			if (transitionsMap.containsKey(key)) {
 				Pair<String, Integer> currentEntry = transitionsMap.get(key);
 				
@@ -74,11 +75,11 @@ public class Constraints {
 		return transitionsMap;
 	}
 	
-	public static Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
+	public static Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
 	bestOutputs(SFA<CharPred, Character> source, SFA<CharPred, Character> target, Set<Character> alphabet, 
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		
-		Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
+		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
 				new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
 		Collection<Integer> sourceStates = source.getStates();
 		Collection<Integer> targetStates = target.getStates();
@@ -91,7 +92,7 @@ public class Constraints {
 					Integer sourceTo = sourceTransition.to;
 					Character input = sourceTransition.getWitness(ba);
 					
-					// Pre-insert 
+					/* Pre-insert */
 					Set<Triple<Integer, String, Integer>> triples = new HashSet<Triple<Integer, String, Integer>>();
 					triples.add(new Triple<Integer, String, Integer>(targetState, "", 0));
 					Set<Triple<Integer, String, Integer>> triplesOld = new HashSet<Triple<Integer, String, Integer>>();
@@ -114,7 +115,7 @@ public class Constraints {
 					Set<Triple<Integer, String, Integer>> newTriples = new HashSet<Triple<Integer, String, Integer>>();
 					newTriples.addAll(triples);
 					
-					// To copy or not to copy
+					/* To copy or not to copy */
 					for (Triple<Integer, String, Integer> triple : triples) {
 						Integer targetTo = SFAOperations.getSuccessorState(target, triple.first, input, ba);
 						String newString = triple.second + input;
@@ -127,7 +128,7 @@ public class Constraints {
 					triples.clear();
 					triples.addAll(newTriples);
 					
-					// Modifying the input character 
+					/* Modifying the input character */
 					for (Character output : alphabet) {
 						if (output == input) continue;
 						
@@ -140,7 +141,7 @@ public class Constraints {
 						}
 					}
 					
-					// Post-insert
+					/* Post-insert */
 					while (!triples.equals(triplesOld)) {
 						triplesOld.clear();
 						triplesOld.addAll(triples);
@@ -157,7 +158,7 @@ public class Constraints {
 						triples = mapToTriples(triplesToMap(triples));
 					}
 					
-					// Add to transitions
+					/* Add to transitions */
 					for (Triple<Integer, String, Integer> triple : triples) {
 						if (!source.isFinalState(sourceTo) && target.isFinalState(triple.first)) continue;
 						
@@ -175,6 +176,63 @@ public class Constraints {
 		
 		return transitions;
 	}
+	
+	
+	public static Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
+	bestOutputsExamples(SFA<CharPred, Character> source, SFA<CharPred, Character> target, List<Pair<String, String>> ioExamples,
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
+				new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
+		
+		for (Pair<String, String> io : ioExamples) {
+			String inputStr = io.first;
+			String outputStr = io.second;
+			
+			int sourceState = source.getInitialState();
+			for (int i = 0; i < inputStr.length(); i++) {
+				Character inputChar = inputStr.charAt(i);
+				// assumes there is a transition in source for every input char in sequence
+				Integer sourceTo = SFAOperations.getSuccessorState(source, sourceState, inputChar, ba);  
+				
+				for (int j = 0; j <= outputStr.length(); j++) {
+					Set<Triple<Integer, String, Integer>> triples = 
+							new HashSet<Triple<Integer, String, Integer>>();
+					String outputSubstr = outputStr.substring(0, j);
+					Integer targetState = SFAOperations.getStateInFA(target, target.getInitialState(), outputSubstr, ba);
+					
+					String outputRemaining = outputStr.substring(j, outputStr.length());
+					
+					for (int k = 0; k <= outputRemaining.length(); k++) {
+						String outputRemSubstr = outputRemaining.substring(0, k);
+						Integer targetTo = SFAOperations.getStateInFA(target, targetState, outputRemSubstr, ba);
+						int cost = EditDistanceStrToStr.getEditDistance(String.valueOf(inputChar), outputRemSubstr);
+						
+						
+						triples.add(new Triple<Integer, String, Integer>(targetTo, outputRemSubstr, cost));
+					}
+					triples = mapToTriples(triplesToMap(triples));
+					
+					/* Add to transitions */
+					for (Triple<Integer, String, Integer> triple : triples) {
+						if (!source.isFinalState(sourceTo) && target.isFinalState(triple.first)) continue;
+						
+						Pair<Integer, Integer> sourcePair = new Pair<Integer, Integer>(sourceState, targetState);
+						Triple<Character, String, Integer> move = new Triple<Character, String, Integer>(inputChar, triple.second, triple.third);
+						Pair<Integer, Integer> targetPair = new Pair<Integer, Integer>(sourceTo, triple.first);
+						Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> newTransition =
+								new Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>(sourcePair, move, targetPair);
+						transitions.add(newTransition);
+					}
+				}
+				
+				sourceState = sourceTo; // advance
+			}
+		}
+		
+		return transitions;
+		
+	}
+	
 	
 	public static HashMap<String, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions) {
 		HashMap<String, Integer> outputInjMap = new HashMap<String, Integer>();
@@ -260,8 +318,14 @@ public class Constraints {
 		Collection <SFAMove<CharPred, Character>> targetTransitions = target.getTransitions();
 		
 		/* set of finite outputs */
-		Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
+		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
 				bestOutputs(source, target, alphabet.keySet(), ba);
+		
+		/* TODO: outputs for examples */
+		for (Pair<String, String> ioExample : ioExamples) {
+			
+		}
+		
 		
 		/* map */
 		HashMap<String, Integer> outputMap = mkInjectiveMap(outputs);
@@ -349,7 +413,7 @@ public class Constraints {
 		
 		/* debug */
 		boolean debug = false;
-		System.out.println(solver.toString());
+		// System.out.println(solver.toString());
 		if (debug) { 
 			if (solver.check() == Status.SATISFIABLE) {
 				Model m = solver.getModel();
