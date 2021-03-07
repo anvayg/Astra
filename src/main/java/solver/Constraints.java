@@ -321,11 +321,6 @@ public class Constraints {
 		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
 				bestOutputs(source, target, alphabet.keySet(), ba);
 		
-		/* TODO: outputs for examples */
-		for (Pair<String, String> ioExample : ioExamples) {
-			
-		}
-		
 		
 		/* map */
 		HashMap<String, Integer> outputMap = mkInjectiveMap(outputs);
@@ -409,6 +404,54 @@ public class Constraints {
 					solver.add(c);
 				}
 			}
+		}
+		
+		/* Input-output examples */
+		FuncDecl[] eFuncs = new FuncDecl[ioExamples.size()];
+		
+		int exampleCount = 0;
+		for (Pair<String, String> ioExample : ioExamples) {
+			/* declare function e_k: k x input_position x output_position x Q */
+			Sort[] args = new Sort[] { I, I, I };
+			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, B);
+			FuncDecl e = eFuncs[exampleCount];
+			
+			/* initial position : e_k(0, 0, q_0) */
+			Expr<IntSort> k = ctx.mkInt(exampleCount);
+			Expr c = e.apply(zero, zero, zero);
+			solver.add(c);
+			
+			int inputLen = ioExample.first.length();
+			Expr<IntSort> inputLength = ctx.mkInt(inputLen);
+			int outputLen = ioExample.second.length();
+			Expr<IntSort> outputLength = ctx.mkInt(outputLen);
+			
+			/* final position : e_k(l1, l2, q) \wedge x(q_R, q, q_T) -> f_R(q_R) \wedge f_T(q_T) */
+			for (int i = 0; i < numStates; i++) {
+				for (Integer sourceState : source.getStates()) {
+					for (Integer targetState : target.getStates()) {
+						Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
+						Expr<IntSort> stateInt = ctx.mkInt(i);
+						Expr<IntSort> targetInt = ctx.mkInt(targetState);
+						
+						Expr exp1 = e.apply(inputLength, outputLength, stateInt);
+						Expr exp2 = x.apply(sourceInt, stateInt, targetInt);
+						Expr exp3 = f_R.apply(sourceInt);
+						Expr exp4 = f_T.apply(targetInt);
+						
+						Expr antecedent = ctx.mkAnd(exp1, exp2);
+						Expr consequent = ctx.mkAnd(exp3, exp4);
+						c = ctx.mkImplies(antecedent, consequent);
+						solver.add(c);
+					}
+				}
+			}
+			
+			/* TODO: transitions */
+			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
+					bestOutputsExamples(source, target, ioExamples, ba);
+			
+			exampleCount++;
 		}
 		
 		/* debug */
