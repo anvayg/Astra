@@ -40,6 +40,24 @@ import utilities.Triple;
 
 public class Constraints {
 	
+	// Fields/instance variables
+	Context ctx;
+	SFA<CharPred, Character> source; 
+	SFA<CharPred, Character> target; 
+	Set<Character> alphabet;
+	HashMap<Character, Integer> alphabetMap;
+	BooleanAlgebraSubst<CharPred, CharFunc, Character> ba;
+	
+	public Constraints(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, HashMap<Character, 
+			Integer> alphabetMap, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+		this.ctx = ctx;
+		this.source = source;
+		this.target = target;
+		this.alphabet = alphabetMap.keySet();
+		this.alphabetMap = alphabetMap;
+		this.ba = ba;
+	}
+	
 	public static <A> Set<Triple<A, String, Integer>> mapToTriples(HashMap<A, Pair<String, Integer>> transitionsMap) {
 		Set<Triple<A, String, Integer>> triples = new HashSet<Triple<A, String, Integer>>();
 		for (Entry<A, Pair<String, Integer>> entry : transitionsMap.entrySet()) {
@@ -73,6 +91,11 @@ public class Constraints {
 		}
 		
 		return transitionsMap;
+	}
+	
+	public Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>
+	bestOutputs() throws TimeoutException {
+		return bestOutputs(source, target, alphabet, ba);
 	}
 	
 	public static Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
@@ -177,6 +200,10 @@ public class Constraints {
 		return transitions;
 	}
 	
+	public Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
+	bestOutputsExamples(Pair<String, String> ioExample) throws TimeoutException {
+		return bestOutputsExamples(source, target, ioExample, ba);
+	}
 	
 	public static Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
 	bestOutputsExamples(SFA<CharPred, Character> source, SFA<CharPred, Character> target, Pair<String, String> ioExample,
@@ -259,6 +286,11 @@ public class Constraints {
 		}
 		
 		return reverseMap;
+	}
+	
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, List<Pair<String, String>> ioExamples) 
+			throws TimeoutException {
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, ioExamples, ba);
 	}
 	
 	
@@ -460,9 +492,8 @@ public class Constraints {
 			/* Set of all outputs updated */
 			allOutputs.addAll(exampleTransitions);
 			
-			
-			/*  Expand injective map to include new outputs */
-			outputMapandFreshCounter = mkInjectiveMap(outputs, outputMapandFreshCounter.second);
+			/*  Expand injective map of all outputs to include new outputs */
+			outputMapandFreshCounter = mkInjectiveMap(allOutputs, outputMapandFreshCounter.second);
 			outputMap = outputMapandFreshCounter.first;
 			
 			for (int m = 0; m < numStates; m++) {
