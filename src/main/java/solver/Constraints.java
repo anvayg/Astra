@@ -179,54 +179,51 @@ public class Constraints {
 	
 	
 	public static Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> 
-	bestOutputsExamples(SFA<CharPred, Character> source, SFA<CharPred, Character> target, List<Pair<String, String>> ioExamples,
+	bestOutputsExamples(SFA<CharPred, Character> source, SFA<CharPred, Character> target, Pair<String, String> ioExample,
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
 				new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
 		
-		for (Pair<String, String> io : ioExamples) {
-			String inputStr = io.first;
-			String outputStr = io.second;
+		String inputStr = ioExample.first;
+		String outputStr = ioExample.second;
 			
-			int sourceState = source.getInitialState();
-			for (int i = 0; i < inputStr.length(); i++) {
-				Character inputChar = inputStr.charAt(i);
-				// assumes there is a transition in source for every input char in sequence
-				Integer sourceTo = SFAOperations.getSuccessorState(source, sourceState, inputChar, ba);  
+		int sourceState = source.getInitialState();
+		for (int i = 0; i < inputStr.length(); i++) {
+			Character inputChar = inputStr.charAt(i);
+			// assumes there is a transition in source for every input char in sequence
+			Integer sourceTo = SFAOperations.getSuccessorState(source, sourceState, inputChar, ba);  
 				
-				for (int j = 0; j <= outputStr.length(); j++) {
-					Set<Triple<Integer, String, Integer>> triples = 
-							new HashSet<Triple<Integer, String, Integer>>();
-					String outputSubstr = outputStr.substring(0, j);
-					Integer targetState = SFAOperations.getStateInFA(target, target.getInitialState(), outputSubstr, ba);
+			for (int j = 0; j <= outputStr.length(); j++) {
+				Set<Triple<Integer, String, Integer>> triples = new HashSet<Triple<Integer, String, Integer>>();
+				String outputSubstr = outputStr.substring(0, j);
+				Integer targetState = SFAOperations.getStateInFA(target, target.getInitialState(), outputSubstr, ba);
 					
-					String outputRemaining = outputStr.substring(j, outputStr.length());
+				String outputRemaining = outputStr.substring(j, outputStr.length());
 					
-					for (int k = 0; k <= outputRemaining.length(); k++) {
-						String outputRemSubstr = outputRemaining.substring(0, k);
-						Integer targetTo = SFAOperations.getStateInFA(target, targetState, outputRemSubstr, ba);
-						int cost = EditDistanceStrToStr.getEditDistance(String.valueOf(inputChar), outputRemSubstr);
+				for (int k = 0; k <= outputRemaining.length(); k++) {
+					String outputRemSubstr = outputRemaining.substring(0, k);
+					Integer targetTo = SFAOperations.getStateInFA(target, targetState, outputRemSubstr, ba);
+					int cost = EditDistanceStrToStr.getEditDistance(String.valueOf(inputChar), outputRemSubstr);
 						
 						
-						triples.add(new Triple<Integer, String, Integer>(targetTo, outputRemSubstr, cost));
-					}
-					triples = mapToTriples(triplesToMap(triples));
-					
-					/* Add to transitions */
-					for (Triple<Integer, String, Integer> triple : triples) {
-						if (!source.isFinalState(sourceTo) && target.isFinalState(triple.first)) continue;
-						
-						Pair<Integer, Integer> sourcePair = new Pair<Integer, Integer>(sourceState, targetState);
-						Triple<Character, String, Integer> move = new Triple<Character, String, Integer>(inputChar, triple.second, triple.third);
-						Pair<Integer, Integer> targetPair = new Pair<Integer, Integer>(sourceTo, triple.first);
-						Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> newTransition =
-								new Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>(sourcePair, move, targetPair);
-						transitions.add(newTransition);
-					}
+					triples.add(new Triple<Integer, String, Integer>(targetTo, outputRemSubstr, cost));
 				}
-				
-				sourceState = sourceTo; // advance
+				triples = mapToTriples(triplesToMap(triples));
+					
+				/* Add to transitions */
+				for (Triple<Integer, String, Integer> triple : triples) {
+					if (!source.isFinalState(sourceTo) && target.isFinalState(triple.first)) continue;
+						
+					Pair<Integer, Integer> sourcePair = new Pair<Integer, Integer>(sourceState, targetState);
+					Triple<Character, String, Integer> move = new Triple<Character, String, Integer>(inputChar, triple.second, triple.third);
+					Pair<Integer, Integer> targetPair = new Pair<Integer, Integer>(sourceTo, triple.first);
+					Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> newTransition =
+							new Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>(sourcePair, move, targetPair);
+					transitions.add(newTransition);
+				}
 			}
+				
+			sourceState = sourceTo; // advance
 		}
 		
 		return transitions;
@@ -234,9 +231,10 @@ public class Constraints {
 	}
 	
 	
-	public static HashMap<String, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions) {
+	public static Pair<HashMap<String, Integer>, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions, 
+			int fresh) {
 		HashMap<String, Integer> outputInjMap = new HashMap<String, Integer>();
-		int counter = 0;
+		int counter = fresh;
 		
 		for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : transitions) {
 			String outputStr = transition.second.second;
@@ -247,7 +245,7 @@ public class Constraints {
 			counter++;
 		}
 		
-		return outputInjMap;
+		return new Pair<HashMap<String, Integer>, Integer>(outputInjMap, counter);
 	}
 	
 	/*
@@ -314,16 +312,14 @@ public class Constraints {
 		Expr res = x.apply(sourceInit, init, targetInit);
 		solver.add(res);
 		
-		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
-		Collection <SFAMove<CharPred, Character>> targetTransitions = target.getTransitions();
-		
 		/* set of finite outputs */
 		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
 				bestOutputs(source, target, alphabet.keySet(), ba);
 		
 		
 		/* map */
-		HashMap<String, Integer> outputMap = mkInjectiveMap(outputs);
+		Pair<HashMap<String, Integer>, Integer> outputMapandFreshCounter = mkInjectiveMap(outputs, 0);
+		HashMap<String, Integer> outputMap = outputMapandFreshCounter.first;
 		
 		/* x function constraints */
 		for (int i = 0; i < numStates; i++) {
@@ -409,6 +405,11 @@ public class Constraints {
 		/* Input-output examples */
 		FuncDecl[] eFuncs = new FuncDecl[ioExamples.size()];
 		
+		/* Set of all outputs */
+		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> allOutputs =
+				new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
+		allOutputs.addAll(outputs);
+		
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
 			/* declare function e_k: k x input_position x output_position x Q */
@@ -447,12 +448,94 @@ public class Constraints {
 				}
 			}
 			
-			/* TODO: transitions */
-			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions = 
-					bestOutputsExamples(source, target, ioExamples, ba);
+			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> exampleTransitions = 
+					bestOutputsExamples(source, target, ioExample, ba);
+			
+			/* Set of outputs to use for this particular example */
+			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputsForExample =
+					new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
+			outputsForExample.addAll(outputs);
+			outputsForExample.addAll(exampleTransitions);
+			
+			/* Set of all outputs updated */
+			allOutputs.addAll(exampleTransitions);
+			
+			
+			/*  Expand injective map to include new outputs */
+			outputMapandFreshCounter = mkInjectiveMap(outputs, outputMapandFreshCounter.second);
+			outputMap = outputMapandFreshCounter.first;
+			
+			for (int m = 0; m < numStates; m++) {
+				for (int n = 0; n < numStates; n++) {
+					for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : outputsForExample) {
+						
+						/* pair of source states */
+						Pair<Integer, Integer> sourcePair = transition.first;
+						Expr<IntSort> qR = ctx.mkInt(sourcePair.first);
+						Expr<IntSort> q1 = ctx.mkInt(m);
+						Expr<IntSort> qT = ctx.mkInt(sourcePair.second);
+						
+						Expr x1 = x.apply(qR, q1, qT);
+						
+						/* pair of target states */
+						Pair<Integer, Integer> targetPair = transition.third;
+						Expr<IntSort> qRprime = ctx.mkInt(targetPair.first);
+						Expr<IntSort> q2 = ctx.mkInt(n);
+						Expr<IntSort> qTprime = ctx.mkInt(targetPair.second);
+						
+						Expr x2 = x.apply(qRprime, q2, qTprime);
+						
+						/* input */
+						Character inputChar = transition.second.first;
+						Integer input = alphabet.get(inputChar);
+						Expr<IntSort> a = ctx.mkInt(input);
+						
+						/* output */
+						String outputStr = transition.second.second;
+						Integer output = outputMap.get(outputStr);
+						Expr<IntSort> b = ctx.mkInt(output);
+						
+						/* d expressions */
+						Expr d1exp = d1.apply(q1, a);
+						Expr eq1 = ctx.mkEq(d1exp, b);
+						
+						Expr d2exp = d2.apply(q1, a);
+						Expr eq2 = ctx.mkEq(d2exp, q2);
+						
+						
+						/* e expressions using outputsForExample */
+						
+						/* input positions */
+						List<Integer> inputPositions = 
+								SFAOperations.getPositionInStr(source, sourcePair.first, ioExample.first, ba);
+						
+						/* output positions */
+						List<Integer> outputPositions = 
+								SFAOperations.getPositionInStr(source, sourcePair.second, ioExample.second, ba);
+						
+						for (Integer i : inputPositions) {
+							for (Integer j : outputPositions) {
+								Expr<IntSort> inputPos = ctx.mkInt(i);
+								Expr<IntSort> outputPos = ctx.mkInt(j);
+								Expr e1 = e.apply(inputPos, outputPos, q1);
+								
+								Expr<IntSort> inputPosNext = ctx.mkInt(i + 1);
+								Expr<IntSort> outputPosNext = ctx.mkInt(j + outputStr.length());
+								Expr e2 = e.apply(inputPosNext, outputPosNext, q2);
+								
+								Expr antecedent = ctx.mkAnd(e1, eq1, eq2, x1);
+								Expr consequent = ctx.mkAnd(e2, x2);
+								Expr exampleConstraint = ctx.mkImplies(antecedent, consequent);
+								solver.add(exampleConstraint);
+							}
+						}
+					}
+				}
+			}
 			
 			exampleCount++;
 		}
+		
 		
 		/* debug */
 		boolean debug = false;

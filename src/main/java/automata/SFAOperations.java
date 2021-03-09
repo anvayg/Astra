@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.sat4j.specs.TimeoutException;
@@ -63,6 +65,24 @@ public class SFAOperations {
 		}
 		
 		return state;
+	}
+	
+	/*
+	 * Returns all positions in 'str' such that aut is in state 'state' while reading 'str'
+	 */
+	public static List<Integer> getPositionInStr(SFA<CharPred, Character> aut, Integer state, String str, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		List<Integer> positions = new LinkedList<Integer>();
+		Integer currentState = 0;
+		if (currentState == state) positions.add(0);
+		
+		for (int i = 0; i < str.length(); i++) {
+			Character move = str.charAt(i);
+			currentState = getSuccessorState(aut, currentState, move, ba);
+			if (currentState == state) positions.add(i + 1); 	// check for possible off by 1
+		}
+		
+		return positions;
 	}
 	
 	// Assume aut1 and aut2 have transitions labeled with single characters
