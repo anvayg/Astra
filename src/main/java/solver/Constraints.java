@@ -235,7 +235,8 @@ public class Constraints {
 						
 					triples.add(new Triple<Integer, String, Integer>(targetTo, outputRemSubstr, cost));
 				}
-				triples = mapToTriples(triplesToMap(triples));
+				// Taking the minimum edit-distance doesn't work?
+				// triples = mapToTriples(triplesToMap(triples));
 					
 				/* Add to transitions */
 				for (Triple<Integer, String, Integer> triple : triples) {
@@ -503,8 +504,10 @@ public class Constraints {
 			/* Set of outputs to use for this particular example */
 			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputsForExample =
 					new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
-			outputsForExample.addAll(outputs);
+			// removing other outputs
+			// outputsForExample.addAll(outputs);
 			outputsForExample.addAll(exampleTransitions);
+			System.out.println();
 			System.out.println(exampleTransitions);
 			
 			/* Set of all outputs updated */
@@ -517,6 +520,8 @@ public class Constraints {
 			for (int m = 0; m < numStates; m++) {
 				for (int n = 0; n < numStates; n++) {
 					for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : outputsForExample) {
+						// removing this check for now */
+						// if (outputs.contains(transition)) continue;
 						
 						/* pair of source states */
 						Pair<Integer, Integer> sourcePair = transition.first;
@@ -587,14 +592,15 @@ public class Constraints {
 		
 		
 		/* debug */
-		System.out.println(solver.toString());
 		if (debug) { 
+			System.out.println(outputMap);
+			System.out.println(solver.toString());
 			if (solver.check() == Status.SATISFIABLE) {
 				Model m = solver.getModel();
 				System.out.println(m.getFuncInterp(x));
 				System.out.println(m.getFuncInterp(d1));
 				System.out.println(m.getFuncInterp(d2));
-				System.out.println(m.getFuncInterp(eFuncs[0]));
+				if (eFuncs.length >= 1) System.out.println(m.getFuncInterp(eFuncs[0]));
 				
 				for (int q1 = 0; q1 < numStates; q1++) {
 					for (int a = 0; a < alphabet.size(); a++) {
@@ -613,7 +619,6 @@ public class Constraints {
 		/* construct transducer */
 		
 		/* reverse HashMaps */
-		System.out.println(outputMap);
 		HashMap<Integer, String> reverseOutputMap = reverseMap(outputMap);
 		HashMap<Integer, Character> reverseAlphabet = reverseMap(alphabet);
 		
