@@ -26,6 +26,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	private static SFA<CharPred, Character> mySFA01;
 	private static SFA<CharPred, Character> mySFA02;
 	private static SFA<CharPred, Character> mySFA03;
+	private static SFA<CharPred, Character> mySFA04;
 	
 	public static void mkSFAs() throws TimeoutException {
 		// SFA0.1: SFA that reads a
@@ -42,6 +43,15 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		finStates02.add(1);
 		mySFA02 = SFA.MkSFA(transitions02, 0, finStates02, ba);
 		mySFA03 = mySFA02.mkTotal(ba);
+		
+		// SFA0.4: SFA that reads ab(ab)*
+		List<SFAMove<CharPred, Character>> transitions04 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions04.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
+		transitions04.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('b')));
+		transitions04.add(new SFAInputMove<CharPred, Character>(2, 1, new CharPred('a')));
+		List<Integer> finStates04 = new LinkedList<Integer>();
+		finStates04.add(2);
+		mySFA04 = SFA.MkSFA(transitions04, 0, finStates04, ba);
 		
 	}
 	
@@ -64,12 +74,22 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		assertTrue(nextState == 2);
 	}
 	
+	// TODO: test for positions
+	public static void getPositionTest() throws TimeoutException {
+		List<Integer> positions = SFAOperations.getPositionInStr(mySFA04, 1, "a", ba);
+		assertTrue(positions.get(0) == 1);
+		
+		positions = SFAOperations.getPositionInStr(mySFA04, 1, "aba", ba);
+		assertTrue(positions.get(1) == 3);
+	}
+	
 	
 	public static void main(String[] args) throws TimeoutException {
 		mkSFAs();
 		
 		getSuccessorStateTest();
 		mkTotalFiniteTest();
+		getPositionTest();
 		
 		Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
 				 SFA.MkFiniteSFA(mySFA01, mySFA02, ba);
