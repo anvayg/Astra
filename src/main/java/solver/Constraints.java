@@ -258,10 +258,9 @@ public class Constraints {
 	}
 	
 	
-	public static Pair<HashMap<String, Integer>, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions, 
-			int fresh) {
+	public static Pair<HashMap<String, Integer>, Integer> mkInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions) {
 		HashMap<String, Integer> outputInjMap = new HashMap<String, Integer>();
-		int counter = fresh;
+		int counter = 0;
 		
 		for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : transitions) {
 			String outputStr = transition.second.second;
@@ -273,6 +272,22 @@ public class Constraints {
 		}
 		
 		return new Pair<HashMap<String, Integer>, Integer>(outputInjMap, counter);
+	}
+	
+	public static Pair<HashMap<String, Integer>, Integer> extendInjectiveMap(Collection<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> transitions, 
+			HashMap<String, Integer> map, int fresh) {
+		int counter = fresh;
+		
+		for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : transitions) {
+			String outputStr = transition.second.second;
+			
+			if (map.containsKey(outputStr)) continue;
+			
+			map.put(outputStr, counter);
+			counter++;
+		}
+		
+		return new Pair<HashMap<String, Integer>, Integer>(map, counter);
 	}
 	
 	/*
@@ -290,14 +305,15 @@ public class Constraints {
 	
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, List<Pair<String, String>> ioExamples) 
 			throws TimeoutException {
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, ioExamples, ba);
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, ioExamples, ba, false);
 	}
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabet, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
-			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
+			boolean debug) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
@@ -350,7 +366,7 @@ public class Constraints {
 		
 		
 		/* map */
-		Pair<HashMap<String, Integer>, Integer> outputMapandFreshCounter = mkInjectiveMap(outputs, 0);
+		Pair<HashMap<String, Integer>, Integer> outputMapandFreshCounter = mkInjectiveMap(outputs);
 		HashMap<String, Integer> outputMap = outputMapandFreshCounter.first;
 		
 		/* x function constraints */
@@ -450,7 +466,6 @@ public class Constraints {
 			FuncDecl e = eFuncs[exampleCount];
 			
 			/* initial position : e_k(0, 0, q_0) */
-			Expr<IntSort> k = ctx.mkInt(exampleCount);
 			Expr c = e.apply(zero, zero, zero);
 			solver.add(c);
 			
@@ -460,6 +475,8 @@ public class Constraints {
 			Expr<IntSort> outputLength = ctx.mkInt(outputLen);
 			
 			/* final position : e_k(l1, l2, q) \wedge x(q_R, q, q_T) -> f_R(q_R) \wedge f_T(q_T) */
+			/* f_R(q_R) should be ensured since input string is accepted by source 
+			 * (Q: should I change this to e_k(l1, l2, q) \wedge x(q_R, q, q_T) -> f_R(q_R) -> f_T(q_T) */
 			for (int i = 0; i < numStates; i++) {
 				for (Integer sourceState : source.getStates()) {
 					for (Integer targetState : target.getStates()) {
@@ -488,12 +505,13 @@ public class Constraints {
 					new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
 			outputsForExample.addAll(outputs);
 			outputsForExample.addAll(exampleTransitions);
+			System.out.println(exampleTransitions);
 			
 			/* Set of all outputs updated */
 			allOutputs.addAll(exampleTransitions);
 			
 			/*  Expand injective map of all outputs to include new outputs */
-			outputMapandFreshCounter = mkInjectiveMap(allOutputs, outputMapandFreshCounter.second);
+			outputMapandFreshCounter = extendInjectiveMap(allOutputs, outputMap, outputMapandFreshCounter.second);
 			outputMap = outputMapandFreshCounter.first;
 			
 			for (int m = 0; m < numStates; m++) {
@@ -569,14 +587,14 @@ public class Constraints {
 		
 		
 		/* debug */
-		boolean debug = false;
-		// System.out.println(solver.toString());
+		System.out.println(solver.toString());
 		if (debug) { 
 			if (solver.check() == Status.SATISFIABLE) {
 				Model m = solver.getModel();
 				System.out.println(m.getFuncInterp(x));
 				System.out.println(m.getFuncInterp(d1));
 				System.out.println(m.getFuncInterp(d2));
+				System.out.println(m.getFuncInterp(eFuncs[0]));
 				
 				for (int q1 = 0; q1 < numStates; q1++) {
 					for (int a = 0; a < alphabet.size(); a++) {
@@ -595,6 +613,7 @@ public class Constraints {
 		/* construct transducer */
 		
 		/* reverse HashMaps */
+		System.out.println(outputMap);
 		HashMap<Integer, String> reverseOutputMap = reverseMap(outputMap);
 		HashMap<Integer, Character> reverseAlphabet = reverseMap(alphabet);
 		
@@ -616,9 +635,14 @@ public class Constraints {
 					String outputStr = reverseOutputMap.get(outputInt);
 					
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
-					for (int l = 0; l < outputStr.length(); l++) {
-						char c = outputStr.charAt(l);
-						outputFunc.add(new CharConstant(c));
+					if (outputStr != null) {
+						for (int l = 0; l < outputStr.length(); l++) {
+							char c = outputStr.charAt(l);
+							outputFunc.add(new CharConstant(c));
+						}
+					} 
+					else {
+						outputFunc.add(new CharConstant(Character.MIN_VALUE));
 					}
 						
 					/* get state */
