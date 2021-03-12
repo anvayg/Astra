@@ -365,7 +365,6 @@ public class Constraints {
 		Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputs = 
 				bestOutputs(source, target, alphabet.keySet(), ba);
 		
-		
 		/* map */
 		Pair<HashMap<String, Integer>, Integer> outputMapandFreshCounter = mkInjectiveMap(outputs);
 		HashMap<String, Integer> outputMap = outputMapandFreshCounter.first;
@@ -504,10 +503,8 @@ public class Constraints {
 			/* Set of outputs to use for this particular example */
 			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputsForExample =
 					new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
-			// removing other outputs
-			// outputsForExample.addAll(outputs);
+			outputsForExample.addAll(outputs);
 			outputsForExample.addAll(exampleTransitions);
-			System.out.println();
 			System.out.println(exampleTransitions);
 			
 			/* Set of all outputs updated */
@@ -590,6 +587,62 @@ public class Constraints {
 			exampleCount++;
 		}
 		
+		/* Declare C : Q -> Z */
+		FuncDecl C = ctx.mkFuncDecl("C", I, I);
+		
+		/* initial state C(0) = 0 */
+		Expr cZero = ctx.mkEq(C.apply(zero), zero);
+		solver.add(cZero);
+		
+		/* C(q1) = min(C(q2) + (m - n \times ED(a, b)) where q1 -- a/b --> q2 */
+		for (int i = 0; i < numStates; i++) {
+			int currentMinVal = Integer.MAX_VALUE;
+			Expr<IntSort> currentMin = ctx.mkInt(currentMinVal);
+			
+			Expr<IntSort> q1 = ctx.mkInt(i);
+			Expr q1C = C.apply(q1);
+			
+			for (int j = 0; j < numStates; j++) {
+				for (Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>> transition : allOutputs) {
+					Expr<IntSort> q2 = ctx.mkInt(j);
+					
+					/* input */
+					Character inputChar = transition.second.first;
+					Integer input = alphabet.get(inputChar);
+					Expr<IntSort> a = ctx.mkInt(input);
+					
+					/* output */
+					String outputStr = transition.second.second;
+					Integer output = outputMap.get(outputStr);
+					Expr<IntSort> b = ctx.mkInt(output);
+					
+					/* d expressions */
+					Expr d1exp = d1.apply(q1, a);
+					Expr eq1 = ctx.mkEq(d1exp, b);
+					
+					Expr d2exp = d2.apply(q1, a);
+					Expr eq2 = ctx.mkEq(d2exp, q2);
+					
+					/* C values */
+					Expr q2C = C.apply(q2);
+					
+					int editDist = EditDistanceStrToStr.getEditDistance(String.valueOf(inputChar), outputStr);
+					Expr<IntSort> editDistInt = ctx.mkInt(editDist);
+					
+					Expr q2CPlusEditDist = ctx.mkAdd(q2C, editDistInt); // TODO: factor in mean allowed cost
+					Expr cond = ctx.mkLt(q2CPlusEditDist, currentMin);
+					Expr min = ctx.mkITE(cond, q2CPlusEditDist, currentMin);
+					
+					/* d1(q1, a) = b \wedge d2(q1, a) = q2 ==> C(q1) = min(q2CPlusEditDist, currentMin) */
+					Expr antecedent = ctx.mkAnd(eq1, eq2);
+					Expr consequent = ctx.mkEq(q1C, min);
+					Expr c = ctx.mkImplies(antecedent, consequent);
+					solver.add(c);
+					
+					currentMin = min; // update currentMin
+				}
+			}
+		}
 		
 		/* debug */
 		if (debug) { 
@@ -629,6 +682,7 @@ public class Constraints {
 			for (int q1 = 0; q1 < numStates; q1++) {
 				for (int a : alphabet.values()) { 
 					Character input = reverseAlphabet.get(a);
+					if (input == Character.MIN_VALUE) continue;
 					Expr q1Int = ctx.mkInt(q1);
 					Expr move = ctx.mkInt(a); 
 					Expr d1exp = d1.apply(q1Int, move);
