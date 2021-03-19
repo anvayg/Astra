@@ -38,7 +38,7 @@ import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.Triple;
 
-public class Constraints {
+public class ConstraintsFixedOutputs {
 	
 	// Fields/instance variables
 	Context ctx;
@@ -48,7 +48,7 @@ public class Constraints {
 	HashMap<Character, Integer> alphabetMap;
 	BooleanAlgebraSubst<CharPred, CharFunc, Character> ba;
 	
-	public Constraints(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, HashMap<Character, 
+	public ConstraintsFixedOutputs(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, HashMap<Character, 
 			Integer> alphabetMap, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.source = source;
@@ -332,24 +332,6 @@ public class Constraints {
 		Sort[] argsToD2 = new Sort[]{ I, I };
 		FuncDecl<Sort> d2 = ctx.mkFuncDecl("d2", argsToD2, I);
 		
-		/* d_1 range */
-		for (int i = 0; i < numStates; i++) {
-			for (int a : alphabet.values()) {
-				Expr<IntSort> q1 = ctx.mkInt(i);
-				Expr<IntSort> input = ctx.mkInt(a);
-				Expr d1exp = d1.apply(q1, input);
-				Expr d2exp = d2.apply(q1, input);
-				Expr c1 = ctx.mkLt(d1exp, alphabetSize);
-				Expr c2 = ctx.mkGe(d1exp, zero);
-				solver.add(c1);
-				solver.add(c2);
-				c1 = ctx.mkLt(d2exp, numStatesInt);
-				c2 = ctx.mkGe(d2exp, zero);
-				solver.add(c1);
-				solver.add(c2);
-			}
-		}
-		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
 		Sort[] argsToX = new Sort[]{ I, I, I };
 		FuncDecl<Sort> x = ctx.mkFuncDecl("x", argsToX, B);
@@ -503,15 +485,14 @@ public class Constraints {
 			/* Set of outputs to use for this particular example */
 			Set<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>> outputsForExample =
 					new HashSet<Triple<Pair<Integer, Integer>, Triple<Character, String, Integer>, Pair<Integer, Integer>>>();
-			outputsForExample.addAll(outputs);
+			// outputsForExample.addAll(outputs);
 			outputsForExample.addAll(exampleTransitions);
-			System.out.println(exampleTransitions);
 			
 			/* Set of all outputs updated */
 			allOutputs.addAll(exampleTransitions);
 			
 			/*  Expand injective map of all outputs to include new outputs */
-			outputMapandFreshCounter = extendInjectiveMap(allOutputs, outputMap, outputMapandFreshCounter.second);
+			outputMapandFreshCounter = extendInjectiveMap(exampleTransitions, outputMap, outputMapandFreshCounter.second);
 			outputMap = outputMapandFreshCounter.first;
 			
 			for (int m = 0; m < numStates; m++) {
@@ -587,13 +568,33 @@ public class Constraints {
 			exampleCount++;
 		}
 		
+		/* d_1 and d_2 range */
+		Expr<IntSort> outputMapSize = ctx.mkInt(outputMap.size());
+		for (int i = 0; i < numStates; i++) {
+			for (int a : alphabet.values()) {
+				Expr<IntSort> q1 = ctx.mkInt(i);
+				Expr<IntSort> input = ctx.mkInt(a);
+				Expr d1exp = d1.apply(q1, input);
+				Expr d2exp = d2.apply(q1, input);
+				Expr c1 = ctx.mkLt(d1exp, outputMapSize);
+				Expr c2 = ctx.mkGe(d1exp, zero);
+				solver.add(c1);
+				solver.add(c2);
+				c1 = ctx.mkLt(d2exp, numStatesInt);
+				c2 = ctx.mkGe(d2exp, zero);
+				solver.add(c1);
+				solver.add(c2);
+			}
+		}
+		
 		/* Declare C : Q -> Z */
 		FuncDecl C = ctx.mkFuncDecl("C", I, I);
 		
 		/* initial state C(0) = 0 */
 		Expr cZero = ctx.mkEq(C.apply(zero), zero);
-		solver.add(cZero);
+		// solver.add(cZero);
 		
+		/* Note: C constraints currently note being added */
 		/* C(q1) = min(C(q2) + (m - n \times ED(a, b)) where q1 -- a/b --> q2 */
 		for (int i = 0; i < numStates; i++) {
 			int currentMinVal = Integer.MAX_VALUE;
@@ -637,7 +638,7 @@ public class Constraints {
 					Expr antecedent = ctx.mkAnd(eq1, eq2);
 					Expr consequent = ctx.mkEq(q1C, min);
 					Expr c = ctx.mkImplies(antecedent, consequent);
-					solver.add(c);
+					// solver.add(c);
 					
 					currentMin = min; // update currentMin
 				}
