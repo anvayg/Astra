@@ -102,7 +102,7 @@ public class SFAOperations {
 			alphabet.add(label);
 		}	
 		
-		alphabet.add(Character.MIN_VALUE); // use for empty
+		// alphabet.add(Character.MIN_VALUE); // use for empty, removing for now!
 		return alphabet;
 	}
 	
@@ -118,7 +118,11 @@ public class SFAOperations {
 		return alphabetMap;
 	}
 	
-	public static SFA<CharPred, Character> mkTotalFinite(SFA<CharPred, Character> aut, Collection<Character> alphabet, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+	/* 
+	 * Makes aut a total finite automaton using the given alphabet set
+	 */
+	public static SFA<CharPred, Character> mkTotalFinite(SFA<CharPred, Character> aut, Set<Character> alphabet, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
 		int sinkState = aut.getMaxStateId() + 1;
 		transitions.addAll(aut.getTransitions());

@@ -1,7 +1,9 @@
 package solver;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -10,16 +12,22 @@ import org.sat4j.specs.TimeoutException;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.FuncDecl;
+import com.microsoft.z3.IntNum;
 import com.microsoft.z3.IntSort;
+import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Sort;
+import com.microsoft.z3.Status;
 
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import theory.BooleanAlgebraSubst;
+import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import transducers.sft.SFT;
+import transducers.sft.SFTInputMove;
+import transducers.sft.SFTMove;
 import utilities.Pair;
 
 public class Constraints {
@@ -42,9 +50,27 @@ public class Constraints {
 		this.alphabetMap = alphabetMap;
 		this.ba = ba;
 	}
+	
+	/*
+	 * Reverse injective map
+	 */
+	public static <A, B> HashMap<B, A> reverseMap(HashMap<A, B> map) { 
+		HashMap<B, A> reverseMap = new HashMap<B, A>();
+		
+		for (A key : map.keySet()) {
+			reverseMap.put(map.get(key), key);
+		}
+		
+		return reverseMap;
+	}
+	
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
+			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, ioExamples, ba, bound, debug);
+	}
 		
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static void mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
+	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
 			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
 			int length, boolean debug) throws TimeoutException {
@@ -102,7 +128,7 @@ public class Constraints {
 		
 		/* d_T: transition relation of target */
 		Sort[] argsToDT = new Sort[]{ I, I };
-		FuncDecl<Sort> dT = ctx.mkFuncDecl("dR", argsToDT, I);
+		FuncDecl<Sort> dT = ctx.mkFuncDecl("dT", argsToDT, I);
 		
 		/* encode d_T */
 		Collection<SFAMove<CharPred, Character>> targetTransitions = target.getTransitions();
@@ -160,40 +186,46 @@ public class Constraints {
 			Expr<IntSort> q = ctx.mkInt(i);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
-				Integer stateFrom = sourceTransition.to;
+				Integer stateFrom = sourceTransition.from;
 				Character move = sourceTransition.getWitness(ba);
 				Expr<IntSort> qR = ctx.mkInt(stateFrom);
 				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+				
+				/* 0 <= out_len(q, a) <= l */
+				Expr outLenExpr = out_len.apply(q, a);
+				solver.add(ctx.mkLe(zero, outLenExpr));
+				solver.add(ctx.mkLe(outLenExpr, bound));
+					
+				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
+				Expr qRPrime = dR.apply(qR, a);
+				
+				
+				/* make variable q' = d2(q, a) */
+				Expr qPrime = d2.apply(q, a);
+				
+				/* 0 <= qPrime < numStates */
+				solver.add(ctx.mkLe(zero, qPrime));
+				solver.add(ctx.mkLt(qPrime, numStatesInt));
+							
+				
+				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+				
+				/* make array of output chars */
+				Expr[] outputChars = new Expr[length];
+				
+				for (int l = 0; l < length; l++) {
+					Expr<IntSort> index = ctx.mkInt(l);
+					Expr d1exp = d1.apply(q, a, index);
+					outputChars[l] = d1exp;
+					
+					/* 0 <= d1(q, a, index) < alphabetSize */
+					solver.add(ctx.mkLe(zero, d1exp));
+					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
+				}
 
+				
 				for (Integer targetFrom : target.getStates()) {
 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
-						
-					/* 0 <= out_len(q, a) <= l */
-					Expr outLenExpr = out_len.apply(q, a);
-					solver.add(ctx.mkLe(zero, outLenExpr));
-					solver.add(ctx.mkLe(outLenExpr, bound));
-						
-					/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
-					Expr qRPrime = dR.apply(qR, a);
-					
-					
-					/* make variable q' = d2(q, a) */
-					Expr qPrime = d2.apply(q, a);
-					
-					/* 0 <= qPrime < numStates */
-					solver.add(ctx.mkLe(zero, qPrime));
-					solver.add(ctx.mkLt(qPrime, numStatesInt));
-								
-					
-					/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
-					
-					/* make array of output chars */
-					Expr[] outputChars = new Expr[length];
-					
-					for (int l = 0; l < length; l++) {
-						Expr<IntSort> index = ctx.mkInt(l);
-						outputChars[l] = d1.apply(q, a, index);
-					}
 					
 					
 					/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
@@ -203,7 +235,6 @@ public class Constraints {
 					
 					dstStates[0] = dT.apply(qT, outputChars[0]);
 					for (int l = 1; l < length; l++) { 		// start from 1 in the loop
-						Expr<IntSort> index = ctx.mkInt(l);
 						dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l - 1]);
 					}
 					
@@ -236,6 +267,122 @@ public class Constraints {
 		}
 		
 		
+		/* Debug */
+		if (debug) { 
+			System.out.println(solver.toString());
+			if (solver.check() == Status.SATISFIABLE) {
+				Model m = solver.getModel();
+				System.out.println(m.getFuncInterp(x));
+				System.out.println(m.getFuncInterp(d1));
+				System.out.println(m.getFuncInterp(d2));
+			}		
+		}
+		
+		
+		// TODO: cost constraints
+		
+		/* declare C: Q -> Z */
+		Sort[] argsToC = new Sort[]{ I, I };
+		FuncDecl<Sort> cost = ctx.mkFuncDecl("C", argsToC, I);
+		
+		/* declare edit-dist */
+		Sort[] argsToEd = new Sort[]{ I, I };
+		FuncDecl<Sort> edDist = ctx.mkFuncDecl("ed_dist", argsToEd, I);
+		
+		for (int i = 0; i < numStates; i++) {	// q 
+			Expr<IntSort> q = ctx.mkInt(i);
+				
+			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
+				Integer stateFrom = sourceTransition.from;
+				Character move = sourceTransition.getWitness(ba);
+				Expr<IntSort> qR = ctx.mkInt(stateFrom);
+				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+					
+				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
+				Expr qRPrime = dR.apply(qR, a);
+				
+				
+				/* make variable q' = d2(q, a) */
+				Expr qPrime = d2.apply(q, a);
+							
+				
+				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+				
+				/* make array of output chars */
+				Expr[] outputChars = new Expr[length];
+				
+				for (int l = 0; l < length; l++) {
+					Expr<IntSort> index = ctx.mkInt(l);
+					Expr d1exp = d1.apply(q, a, index);
+					outputChars[l] = d1exp;
+					
+					/* 0 <= d1(q, a, index) < alphabetSize */
+					solver.add(ctx.mkLe(zero, d1exp));
+					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
+				}
+
+				
+				for (Integer targetFrom : target.getStates()) {
+					Expr<IntSort> qT = ctx.mkInt(targetFrom);
+					
+				}
+				
+			}
+		}
+		
+		
+		
+		// TODO: example constraints
+		
+		
+		/* Reconstruct transducer */
+		
+		HashMap<Integer, Character> revAlphabetMap = reverseMap(alphabetMap);
+		
+		List<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+		
+		if (solver.check() == Status.SATISFIABLE) {
+			long startTime = System.nanoTime();
+			Model m = solver.getModel();
+			long stopTime = System.nanoTime();
+			System.out.println((stopTime - startTime));
+			System.out.println((stopTime - startTime) / 1000000000);
+			
+			for (int q1 = 0; q1 < numStates; q1++) {
+				for (int move : alphabetMap.values())  { 
+					Character input = revAlphabetMap.get(move);
+					Expr state = ctx.mkInt(q1);
+					Expr a = ctx.mkInt(move); 
+					
+					/* get state to */
+					Expr d2exp = d2.apply(state, a);
+					int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+					
+					/* output_len */
+					Expr outputLenExpr = out_len.apply(state, a);
+					int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+					
+					/* get output */
+					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+					for (int i = 0; i < outputLen; i++) {
+						Expr<IntSort> index = ctx.mkInt(i);
+						Expr d1exp = d1.apply(state, a, index);
+						int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+						Character output = revAlphabetMap.get(outMove);
+						outputFunc.add(new CharConstant(output));
+					}
+					
+					transitionsFT.add(new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc));
+				}
+			}
+					
+		}
+		
+
+		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();
+		SFT<CharPred, CharFunc, Character> mySFT = SFT.MkSFT(transitionsFT, 0, finStates, ba);
+		
+		return mySFT;
 		
 	}
 		
