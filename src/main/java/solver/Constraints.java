@@ -283,9 +283,12 @@ public class Constraints {
 		
 		/* declare C: Q -> Z */
 		Sort[] argsToC = new Sort[]{ I, I };
-		FuncDecl<Sort> cost = ctx.mkFuncDecl("C", argsToC, I);
+		FuncDecl cost = ctx.mkFuncDecl("C", argsToC, I);
 		
-		/* declare edit-dist */
+		/* C(0) = 0 */
+		solver.add(ctx.mkEq(cost.apply(zero), zero));
+		
+		/* declare edit-dist: Q x \Sigma -> Z */
 		Sort[] argsToEd = new Sort[]{ I, I };
 		FuncDecl<Sort> edDist = ctx.mkFuncDecl("ed_dist", argsToEd, I);
 		
@@ -298,7 +301,7 @@ public class Constraints {
 				Expr<IntSort> qR = ctx.mkInt(stateFrom);
 				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
 				
-				/* out_len(q, a) */
+				/* make variable out_len(q, a) */
 				Expr outLenExpr = out_len.apply(q, a);
 					
 				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
@@ -307,23 +310,58 @@ public class Constraints {
 				
 				/* make variable q' = d2(q, a) */
 				Expr qPrime = d2.apply(q, a);
-							
+				
+				/* make variable ed_dist(q, a) */
+				Expr edDistExpr = edDist.apply(q, a);
 				
 				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
 				
 				/* make array of output chars */
 				Expr[] outputChars = new Expr[length];
 				
+				/* comparing a to each output char */
+				Expr disjunct = ctx.mkFalse();
+				
 				for (int l = 0; l < length; l++) {
 					Expr<IntSort> index = ctx.mkInt(l);
 					Expr d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp;
+					Expr eq = ctx.mkEq(a, d1exp);
+					disjunct = ctx.mkOr(disjunct, eq);
 				}
 
+				/* for condition where the output chars don't include 'a' */
+				Expr negDisjunct = ctx.mkNot(disjunct);
+				
+				/* (k = 0) ==> ed_dist(q, a) = 1 */
+				Expr lenEq = ctx.mkEq(outLenExpr, zero);
+				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkInt(1));
+				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
+				Expr lenNotZero = ctx.mkNot(lenEq);
+				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkSub(outLenExpr, ctx.mkInt(1))); 	// check mkSub
+				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k */
+				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
+				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
 				
 				for (Integer targetFrom : target.getStates()) {
 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
 					
+					/* x(q_R, q, q_T) */
+					Expr xExpr = x.apply(qR, q, qT);
+					
+					/* ed_dist constraint 1 */
+					Expr antecedent = ctx.mkAnd(xExpr, disjunct);
+					Expr consequent = ctx.mkAnd(impl1, impl2);
+					solver.add(ctx.mkImplies(antecedent, consequent));
+					
+					/* ed_dist constraint 2 */
+					antecedent = ctx.mkAnd(xExpr, negDisjunct);
+					consequent = ctx.mkAnd(impl1, impl3);
+					solver.add(ctx.mkImplies(antecedent, consequent)); 
 				}
 				
 			}
