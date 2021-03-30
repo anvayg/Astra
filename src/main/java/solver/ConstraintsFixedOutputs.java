@@ -594,7 +594,7 @@ public class ConstraintsFixedOutputs {
 		Expr cZero = ctx.mkEq(C.apply(zero), zero);
 		// solver.add(cZero);
 		
-		/* Note: C constraints currently note being added */
+		/* Note: C constraints currently not being added */
 		/* C(q1) = min(C(q2) + (m - n \times ED(a, b)) where q1 -- a/b --> q2 */
 		for (int i = 0; i < numStates; i++) {
 			int currentMinVal = Integer.MAX_VALUE;

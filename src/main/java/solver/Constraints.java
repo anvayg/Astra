@@ -297,6 +297,9 @@ public class Constraints {
 				Character move = sourceTransition.getWitness(ba);
 				Expr<IntSort> qR = ctx.mkInt(stateFrom);
 				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+				
+				/* out_len(q, a) */
+				Expr outLenExpr = out_len.apply(q, a);
 					
 				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
 				Expr qRPrime = dR.apply(qR, a);
@@ -315,10 +318,6 @@ public class Constraints {
 					Expr<IntSort> index = ctx.mkInt(l);
 					Expr d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp;
-					
-					/* 0 <= d1(q, a, index) < alphabetSize */
-					solver.add(ctx.mkLe(zero, d1exp));
-					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
 				}
 
 				
@@ -332,7 +331,136 @@ public class Constraints {
 		
 		
 		
-		// TODO: example constraints
+		/* example constraints */
+		FuncDecl[] eFuncs = new FuncDecl[ioExamples.size()];
+		
+		int exampleCount = 0;
+		for (Pair<String, String> ioExample : ioExamples) {
+			/* declare function e_k: k x input_position x output_position x Q */
+			Sort[] args = new Sort[] { I, I, I };
+			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, B);
+			FuncDecl e = eFuncs[exampleCount];
+			
+			/* initial position : e_k(0, 0, q_0) */
+			solver.add(e.apply(zero, zero, zero));
+			
+			int inputLen = ioExample.first.length();
+			Expr<IntSort> inputLength = ctx.mkInt(inputLen);
+			int outputLen = ioExample.second.length();
+			Expr<IntSort> outputLength = ctx.mkInt(outputLen);
+			
+			/* final position : e_k(l1, l2, q) \wedge x(q_R, q, q_T) -> f_R(q_R) \wedge f_T(q_T) */
+			/* f_R(q_R) should be ensured since input string is accepted by source 
+			 * (Q: should I change this to e_k(l1, l2, q) \wedge x(q_R, q, q_T) -> f_R(q_R) -> f_T(q_T) */
+			for (int i = 0; i < numStates; i++) {
+				for (Integer sourceState : source.getStates()) {
+					for (Integer targetState : target.getStates()) {
+						Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
+						Expr<IntSort> stateInt = ctx.mkInt(i);
+						Expr<IntSort> targetInt = ctx.mkInt(targetState);
+						
+						Expr exp1 = e.apply(inputLength, outputLength, stateInt);
+						Expr exp2 = x.apply(sourceInt, stateInt, targetInt);
+						Expr exp3 = f_R.apply(sourceInt);
+						Expr exp4 = f_T.apply(targetInt);
+						
+						Expr antecedent = ctx.mkAnd(exp1, exp2);
+						Expr consequent = ctx.mkAnd(exp3, exp4);
+						Expr c = ctx.mkImplies(antecedent, consequent);
+						solver.add(c);
+					}
+				}
+			}
+			
+			
+			for (int n = 0; n < numStates; n++) {	// q 
+				Expr<IntSort> q = ctx.mkInt(n);
+					
+				for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
+					Integer stateFrom = sourceTransition.from;
+					Character move = sourceTransition.getWitness(ba);
+					Expr<IntSort> qR = ctx.mkInt(stateFrom);
+					Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+					
+					/* out_len(q, a) */
+					Expr outLenExpr = out_len.apply(q, a);
+						
+					/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
+					Expr qRPrime = dR.apply(qR, a);
+					
+					
+					/* make variable q' = d2(q, a) */
+					Expr qPrime = d2.apply(q, a);
+								
+					
+					/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+					
+					/* make array of output chars */
+					Expr[] outputChars = new Expr[length];
+					
+					for (int l = 0; l < length; l++) {
+						Expr<IntSort> index = ctx.mkInt(l);
+						Expr d1exp = d1.apply(q, a, index);
+						outputChars[l] = d1exp;
+					}
+
+					
+					for (Integer targetFrom : target.getStates()) {
+						Expr<IntSort> qT = ctx.mkInt(targetFrom);
+						
+						/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
+						
+						/* make array of destination states in target */
+						Expr[] dstStates = new Expr[length];
+						
+						dstStates[0] = dT.apply(qT, outputChars[0]);
+						for (int l = 1; l < length; l++) { 		// start from 1 in the loop
+							dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l - 1]);
+						}
+						
+						/* x(q_R, q, q_T) */
+						Expr xExpr = x.apply(qR, q, qT);
+						
+						for (int i = 0; i < inputLen - 1; i++) {
+							for (int j = 0; j < outputLen - 1; j++) {
+								Expr<IntSort> inputPosition = ctx.mkInt(i);
+								Expr<IntSort> outputPosition = ctx.mkInt(j);
+								
+								
+								/* e_k(i, j, q) */
+								Expr eExpr = e.apply(inputPosition, outputPosition, q);
+								
+								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1, j, q') \wedge x(qR', q', qT) */
+								
+								/* special case for 0 */
+								Expr lenEq = ctx.mkEq(outLenExpr, zero);
+								Expr eExprPrime = e.apply(ctx.mkInt(i + 1), outputPosition, qPrime);
+								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
+								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
+								
+								/* loop for the rest */
+								Expr consequent = c;
+								for (int l = 0; l < length; l++) {
+									int outputGenLength = l + 1;
+									lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputGenLength));
+									eExprPrime = e.apply(ctx.mkInt(i + 1), ctx.mkInt(j + outputGenLength), qPrime);
+									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
+									c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
+									consequent = ctx.mkAnd(consequent, c);
+								}
+								
+								
+								/* make big constraint */
+								Expr antecedent = ctx.mkAnd(eExprPrime, xExprPrime);
+								solver.add(ctx.mkImplies(antecedent, consequent));
+							}
+						}
+						
+					}
+					
+				}
+			}
+		}
 		
 		
 		/* Reconstruct transducer */
