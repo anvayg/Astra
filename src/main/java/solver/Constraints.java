@@ -64,16 +64,26 @@ public class Constraints {
 		return reverseMap;
 	}
 	
+	// TODO: add methods for different customizations
+	
+	/* static method for mkConstraints without examples */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
-			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, ioExamples, ba, bound, debug);
+			int[] fraction, boolean debug) throws TimeoutException {
+		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, empty, ba, debug);
+	}
+	
+	/* static method for mkConstraints */
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
+			List<Pair<String, String>> ioExamples, int[] fraction, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, ba, debug);
 	}
 		
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
-			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, 
+			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
 			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
-			int length, boolean debug) throws TimeoutException {
+			boolean debug) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
@@ -191,7 +201,7 @@ public class Constraints {
 				Expr<IntSort> qR = ctx.mkInt(stateFrom);
 				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
 				
-				/* 0 <= out_len(q, a) <= l */
+				/* 0 <= out_len(q, a) <= l; range only needs to be encoded once */
 				Expr outLenExpr = out_len.apply(q, a);
 				solver.add(ctx.mkLe(zero, outLenExpr));
 				solver.add(ctx.mkLe(outLenExpr, bound));
@@ -203,7 +213,7 @@ public class Constraints {
 				/* make variable q' = d2(q, a) */
 				Expr qPrime = d2.apply(q, a);
 				
-				/* 0 <= qPrime < numStates */
+				/* 0 <= qPrime < numStates; range only needs to be encoded once */
 				solver.add(ctx.mkLe(zero, qPrime));
 				solver.add(ctx.mkLt(qPrime, numStatesInt));
 							
@@ -279,14 +289,14 @@ public class Constraints {
 		}
 		
 		
-		// TODO: cost constraints
+		/* cost constraints */
 		
 		/* declare C: Q -> Z */
-		Sort[] argsToC = new Sort[]{ I, I };
-		FuncDecl cost = ctx.mkFuncDecl("C", argsToC, I);
+		Sort[] argsToC = new Sort[]{ I };
+		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
 		
 		/* C(0) = 0 */
-		solver.add(ctx.mkEq(cost.apply(zero), zero));
+		// solver.add(ctx.mkEq(energy.apply(zero), zero));
 		
 		/* declare edit-dist: Q x \Sigma -> Z */
 		Sort[] argsToEd = new Sort[]{ I, I };
@@ -306,7 +316,6 @@ public class Constraints {
 					
 				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
 				Expr qRPrime = dR.apply(qR, a);
-				
 				
 				/* make variable q' = d2(q, a) */
 				Expr qPrime = d2.apply(q, a);
@@ -347,6 +356,15 @@ public class Constraints {
 				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
 				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
 				
+				/* energy: C(q) >= C(d2(q, a)) + (m - (n x ed_dist(q, a))) */
+				Expr cQ = energy.apply(q);
+				Expr cQPrime = energy.apply(qPrime);
+				Expr<IntSort> m = ctx.mkInt(fraction[0]);
+				Expr<IntSort> n = ctx.mkInt(fraction[1]);
+				Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
+				Expr c = ctx.mkGe(cQ, ctx.mkAdd(cQPrime, diff));
+				// solver.add(c); 
+				
 				for (Integer targetFrom : target.getStates()) {
 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
 					
@@ -356,12 +374,12 @@ public class Constraints {
 					/* ed_dist constraint 1 */
 					Expr antecedent = ctx.mkAnd(xExpr, disjunct);
 					Expr consequent = ctx.mkAnd(impl1, impl2);
-					solver.add(ctx.mkImplies(antecedent, consequent));
+					// solver.add(ctx.mkImplies(antecedent, consequent));
 					
 					/* ed_dist constraint 2 */
 					antecedent = ctx.mkAnd(xExpr, negDisjunct);
 					consequent = ctx.mkAnd(impl1, impl3);
-					solver.add(ctx.mkImplies(antecedent, consequent)); 
+					// solver.add(ctx.mkImplies(antecedent, consequent)); 
 				}
 				
 			}
@@ -459,8 +477,8 @@ public class Constraints {
 						/* x(q_R, q, q_T) */
 						Expr xExpr = x.apply(qR, q, qT);
 						
-						for (int i = 0; i < inputLen - 1; i++) {
-							for (int j = 0; j < outputLen - 1; j++) {
+						for (int i = 0; i < inputLen - 1; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
+							for (int j = 0; j < outputLen; j++) {	// but output is already completely generated
 								Expr<IntSort> inputPosition = ctx.mkInt(i);
 								Expr<IntSort> outputPosition = ctx.mkInt(j);
 								

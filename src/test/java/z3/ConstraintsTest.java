@@ -69,8 +69,8 @@ public class ConstraintsTest {
 		transitions05.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('c')));
 		transitions05.add(new SFAInputMove<CharPred, Character>(2, 2, new CharPred('c')));
 		List<Integer> finStates05 = new LinkedList<Integer>();
-		finStates05.add(3);
-		mySFA05 = SFA.MkSFA(transitions05, 0, finStates05, ba, false, false);
+		finStates05.add(2);
+		mySFA05 = SFA.MkSFA(transitions05, 0, finStates05, ba, false, false); // important to prevent normalization and keep transitions in the same shape
 	}
 	
 	static void constraintsTest(Context ctx) throws TimeoutException {
@@ -85,9 +85,9 @@ public class ConstraintsTest {
 		
 		// System.out.println(alphabetMap);
 		Constraints c = new Constraints(ctx, mySFA01Total, mySFA02Total, alphabetMap, ba);
-		
+		int[] fraction = new int[] {1, 1};
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, empty, false);
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, empty, fraction, false);
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
@@ -104,25 +104,25 @@ public class ConstraintsTest {
 		// System.out.println(alphabetMap);
 		Constraints c = new Constraints(ctx, mySFA03Total, mySFA04Total, alphabetMap, ba);
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, empty, false);
+		int[] fraction = new int[] {1, 1};
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, empty, fraction, false);
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
 	static void constraintsTest3(Context ctx) throws TimeoutException {
 		// Make object
 		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA05, ba);
-		System.out.println(alphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		int numStates = 3;
 				
 		// Make FAs total
 		SFA<CharPred, Character> mySFA03Total = SFAOperations.mkTotalFinite(mySFA03, alphabetSet, ba);
 		SFA<CharPred, Character> mySFA05Total = SFAOperations.mkTotalFinite(mySFA05, alphabetSet, ba);
-				
-		System.out.println(alphabetMap);
+		
 		Constraints c = new Constraints(ctx, mySFA03Total, mySFA05Total, alphabetMap, ba);
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 3, empty, true);
+		int[] fraction = new int[] {1, 1};
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 3, empty, fraction, true);
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
