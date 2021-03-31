@@ -245,7 +245,7 @@ public class Constraints {
 					
 					dstStates[0] = dT.apply(qT, outputChars[0]);
 					for (int l = 1; l < length; l++) { 		// start from 1 in the loop
-						dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l - 1]);
+						dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l]); // changed to l from l-1
 					}
 					
 					
@@ -471,7 +471,7 @@ public class Constraints {
 						
 						dstStates[0] = dT.apply(qT, outputChars[0]);
 						for (int l = 1; l < length; l++) { 		// start from 1 in the loop
-							dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l - 1]);
+							dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l]);
 						}
 						
 						/* x(q_R, q, q_T) */
