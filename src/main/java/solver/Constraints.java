@@ -1,6 +1,7 @@
 package solver;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -19,6 +20,7 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Sort;
 import com.microsoft.z3.Status;
 
+import automata.SFAOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import theory.BooleanAlgebraSubst;
@@ -64,7 +66,18 @@ public class Constraints {
 		return reverseMap;
 	}
 	
-	// TODO: add methods for different customizations
+	/* 
+	 * Converts a string from an input-output example to an int array using the alphabet map
+	 */
+	public static int[] stringToIntArray(HashMap<Character, Integer> alphabetMap, String str) {
+		int[] arr = new int[str.length()];
+		
+		for (int i = 0; i < str.length(); i++) {
+			arr[i] = alphabetMap.get(str.charAt(i));
+		}
+		
+		return arr;
+	}
 	
 	/* static method for mkConstraints without examples */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
@@ -74,8 +87,8 @@ public class Constraints {
 	}
 	
 	/* static method for mkConstraints */
-	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
-			List<Pair<String, String>> ioExamples, int[] fraction, boolean debug) throws TimeoutException { 	// take out debug later
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
+			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
 		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, ba, debug);
 	}
 		
@@ -277,18 +290,6 @@ public class Constraints {
 		}
 		
 		
-		/* Debug */
-		if (debug) { 
-			System.out.println(solver.toString());
-			if (solver.check() == Status.SATISFIABLE) {
-				Model m = solver.getModel();
-				System.out.println(m.getFuncInterp(x));
-				System.out.println(m.getFuncInterp(d1));
-				System.out.println(m.getFuncInterp(d2));
-			}		
-		}
-		
-		
 		/* cost constraints */
 		
 		/* declare C: Q -> Z */
@@ -392,6 +393,15 @@ public class Constraints {
 		
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
+			/* verify example */
+			if (!SFAOperations.isAcceptedBy(ioExample.first, source, ba)) throw new IllegalArgumentException();
+			if (!SFAOperations.isAcceptedBy(ioExample.second, target, ba)) throw new IllegalArgumentException();
+			
+			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
+			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
+			System.out.println(Arrays.toString(inputArr));
+			System.out.println(Arrays.toString(outputArr));
+			
 			/* declare function e_k: k x input_position x output_position x Q */
 			Sort[] args = new Sort[] { I, I, I };
 			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, B);
@@ -427,7 +437,7 @@ public class Constraints {
 					}
 				}
 			}
-			
+	
 			
 			for (int n = 0; n < numStates; n++) {	// q 
 				Expr<IntSort> q = ctx.mkInt(n);
@@ -459,7 +469,6 @@ public class Constraints {
 						Expr d1exp = d1.apply(q, a, index);
 						outputChars[l] = d1exp;
 					}
-
 					
 					for (Integer targetFrom : target.getStates()) {
 						Expr<IntSort> qT = ctx.mkInt(targetFrom);
@@ -482,8 +491,17 @@ public class Constraints {
 								Expr<IntSort> inputPosition = ctx.mkInt(i);
 								Expr<IntSort> outputPosition = ctx.mkInt(j);
 								
+								/* input[i+1] = a */
+								Expr nextInputPosition = ctx.mkInt(inputArr[i + 1]);
+								Expr inputEq = ctx.mkEq(nextInputPosition, a);
 								
-								/* e_k(i, j, q) */
+								/* output needs be <= outputLen - j */
+								int possibleOutputLen = outputLen - j;
+								Expr possibleOutputLength = ctx.mkInt(possibleOutputLen);
+								
+								Expr outputLe = ctx.mkLe(outLenExpr, possibleOutputLength);
+								
+								/* e_k(i, j, q) */ 
 								Expr eExpr = e.apply(inputPosition, outputPosition, q);
 								
 								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1, j, q') \wedge x(qR', q', qT) */
@@ -495,19 +513,29 @@ public class Constraints {
 								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
 								
 								/* loop for the rest */
-								Expr consequent = c;
-								for (int l = 0; l < length; l++) {
+								Expr consequent = ctx.mkAnd(outputLe, c);
+								for (int l = 0; l < possibleOutputLen; l++) { 
 									int outputGenLength = l + 1;
 									lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputGenLength));
 									eExprPrime = e.apply(ctx.mkInt(i + 1), ctx.mkInt(j + outputGenLength), qPrime);
 									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
-									c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
+									
+									/* equalities */
+									Expr stringEqualities = ctx.mkTrue();
+									for (int inc = 1; inc <= outputGenLength; inc++) {
+										int index = (j + inc) - 1;
+										Expr nextPosition = ctx.mkInt(outputArr[index]);
+										Expr eq = ctx.mkEq(nextPosition, outputChars[inc - 1]); 	// not sure about this
+										stringEqualities = ctx.mkAnd(stringEqualities, eq);
+									}
+									
+									c = ctx.mkImplies(ctx.mkAnd(lenEq, stringEqualities), ctx.mkAnd(eExprPrime, xExprPrime));
 									consequent = ctx.mkAnd(consequent, c);
 								}
 								
 								
 								/* make big constraint */
-								Expr antecedent = ctx.mkAnd(eExprPrime, xExprPrime);
+								Expr antecedent = ctx.mkAnd(eExpr, xExpr, inputEq);
 								solver.add(ctx.mkImplies(antecedent, consequent));
 							}
 						}
@@ -516,6 +544,17 @@ public class Constraints {
 					
 				}
 			}
+		}
+		
+		/* Debug */
+		if (debug) { 
+			System.out.println(solver.toString());
+			if (solver.check() == Status.SATISFIABLE) {
+				Model m = solver.getModel();
+				System.out.println(m.getFuncInterp(x));
+				System.out.println(m.getFuncInterp(d1));
+				System.out.println(m.getFuncInterp(d2));
+			}		
 		}
 		
 		

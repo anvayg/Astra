@@ -143,5 +143,15 @@ public class SFAOperations {
 		return SFA.MkSFA(transitions, aut.getInitialState(), aut.getFinalStates(), ba, false, false);
 	}
 	
+	/* 
+	 * Returns true if a run of string on aut ends in a final state
+	 */
+	public static boolean isAcceptedBy(String str, SFA<CharPred, Character> aut, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Integer state = getStateInFA(aut, 0, str, ba);
+		if (aut.isFinalState(state)) return true;
+		
+		return false;
+	}
 	
 }
