@@ -547,7 +547,7 @@ public class Constraints {
 		
 		/* Debug */
 		if (debug) { 
-			// System.out.println(solver.toString());
+			System.out.println(solver.toString());
 			if (solver.check() == Status.SATISFIABLE) {
 				Model m = solver.getModel();
 				System.out.println(m.getFuncInterp(x));
