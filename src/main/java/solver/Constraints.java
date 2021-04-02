@@ -399,8 +399,6 @@ public class Constraints {
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
-			System.out.println(Arrays.toString(inputArr));
-			System.out.println(Arrays.toString(outputArr));
 			
 			/* declare function e_k: k x input_position x output_position x Q */
 			Sort[] args = new Sort[] { I, I, I };
@@ -486,17 +484,17 @@ public class Constraints {
 						/* x(q_R, q, q_T) */
 						Expr xExpr = x.apply(qR, q, qT);
 						
-						for (int i = 0; i < inputLen - 1; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
-							for (int j = 0; j < outputLen; j++) {	// but output is already completely generated
+						for (int i = 0; i < inputLen; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
+							for (int j = 0; j <= outputLen; j++) {	// but output is already completely generated
 								Expr<IntSort> inputPosition = ctx.mkInt(i);
 								Expr<IntSort> outputPosition = ctx.mkInt(j);
 								
 								/* input[i+1] = a */
-								Expr nextInputPosition = ctx.mkInt(inputArr[i + 1]);
+								Expr nextInputPosition = ctx.mkInt(inputArr[i]);
 								Expr inputEq = ctx.mkEq(nextInputPosition, a);
 								
 								/* output needs be <= outputLen - j */
-								int possibleOutputLen = outputLen - j;
+								int possibleOutputLen = Math.min(outputLen - j, length);
 								Expr possibleOutputLength = ctx.mkInt(possibleOutputLen);
 								
 								Expr outputLe = ctx.mkLe(outLenExpr, possibleOutputLength);
@@ -529,7 +527,8 @@ public class Constraints {
 										stringEqualities = ctx.mkAnd(stringEqualities, eq);
 									}
 									
-									c = ctx.mkImplies(ctx.mkAnd(lenEq, stringEqualities), ctx.mkAnd(eExprPrime, xExprPrime));
+									// moved stringEqualities to consequent, see what happens
+									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
 									consequent = ctx.mkAnd(consequent, c);
 								}
 								
@@ -548,12 +547,13 @@ public class Constraints {
 		
 		/* Debug */
 		if (debug) { 
-			System.out.println(solver.toString());
+			// System.out.println(solver.toString());
 			if (solver.check() == Status.SATISFIABLE) {
 				Model m = solver.getModel();
 				System.out.println(m.getFuncInterp(x));
 				System.out.println(m.getFuncInterp(d1));
 				System.out.println(m.getFuncInterp(d2));
+				System.out.println(m.getFuncInterp(out_len));
 			}		
 		}
 		
