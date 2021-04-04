@@ -112,22 +112,22 @@ public class ConstraintsTest {
 		
 		// SFA0.9 
 		List<SFAMove<CharPred, Character>> transitions09 = new LinkedList<SFAMove<CharPred, Character>>();
-		transitions09.add(new SFAInputMove<CharPred, Character>(0, 2, new CharPred(';')));
+		transitions09.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred(';')));
 		transitions09.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
 		transitions09.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('b')));
-		transitions09.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred(';')));
+		transitions09.add(new SFAInputMove<CharPred, Character>(1, 0, new CharPred(';')));
 		List<Integer> finStates09 = new LinkedList<Integer>();
-		finStates09.add(2);
+		finStates09.add(0);
 		mySFA09 = SFA.MkSFA(transitions09, 0, finStates09, ba, false, false);
 		
 		// SFA1.0
 		List<SFAMove<CharPred, Character>> transitions10 = new LinkedList<SFAMove<CharPred, Character>>();
-		transitions10.add(new SFAInputMove<CharPred, Character>(0, 2, new CharPred(';')));
+		transitions10.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred(';')));
 		transitions10.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
 		// transitions10.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred(';')));
-		transitions10.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred(';')));
+		transitions10.add(new SFAInputMove<CharPred, Character>(1, 0, new CharPred(';')));
 		List<Integer> finStates10 = new LinkedList<Integer>();
-		finStates10.add(2);
+		finStates10.add(0);
 		mySFA10 = SFA.MkSFA(transitions10, 0, finStates10, ba, false, false);
 	}
 	
@@ -240,7 +240,7 @@ public class ConstraintsTest {
         
         // try to add example
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        // examples.add(new Pair<String, String>(";", ";")); 
+        examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", ";"));
         examples.add(new Pair<String, String>("b;", "b;"));
         customConstraintsWithExamplesTest(ctx, mySFA07, mySFA08, 4, 2, fraction, examples, false);
@@ -252,7 +252,6 @@ public class ConstraintsTest {
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("b;", ";"));
         examples.add(new Pair<String, String>("a;", "a;")); 
-        System.out.println(SFAOperations.getStateInFA(mySFA10, mySFA10.getInitialState(), "a;", ba));
         customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 4, 2, fraction, examples, false);
 	}
 	
