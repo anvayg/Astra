@@ -284,7 +284,7 @@ public class Constraints {
 					}
 					
 					/* make big constraint */
-					solver.add(ctx.mkImplies(xExpr, consequent));
+					// solver.add(ctx.mkImplies(xExpr, consequent));
 				}
 			}
 		}
@@ -433,6 +433,16 @@ public class Constraints {
 				}
 			}
 			solver.add(bigOr);
+			
+			/* not e(l1, l, q) where l < l2 */
+			for (int i = 0; i < numStates; i++) {
+					Expr<IntSort> stateInt = ctx.mkInt(i);
+						
+					for (int l = 0; l < outputLen; l++) {
+						Expr c = ctx.mkNot(e.apply(inputLength, ctx.mkInt(l), stateInt));
+						solver.add(c);
+					}
+			}
 	
 			
 			for (int n = 0; n < numStates; n++) {	// q 
@@ -544,57 +554,6 @@ public class Constraints {
 			exampleCount++;
 		}
 		
-		/* Debug */
-		if (debug) { 
-			// System.out.println(solver.toString());
-			if (solver.check() == Status.SATISFIABLE) {
-				Model m = solver.getModel();
-				System.out.println(m.getFuncInterp(x));
-				System.out.println(m.getFuncInterp(d1));
-				System.out.println(m.getFuncInterp(d2));
-				System.out.println(m.getFuncInterp(out_len));
-				
-				/* for which is x(q_R, q, q_T) set to TRUE? */
-				for (int i = 0; i < numStates; i++) {
-					for (Integer sourceState : source.getStates()) {
-						for (Integer targetState : target.getStates()) {
-							Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
-							Expr<IntSort> stateInt = ctx.mkInt(i);
-							Expr<IntSort> targetInt = ctx.mkInt(targetState);
-							
-							Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
-							if (m.evaluate(exp1, false).isTrue()) {
-								System.out.println("x(" + sourceState + ", " + stateInt + ", " + targetState + ")");
-							}
-						}
-					}
-				}
-				
-				/* for which values is e_k(i, j, q) set to TRUE? */
-				for (int q = 0; q < numStates; q++) {
-					Expr<IntSort> stateInt = ctx.mkInt(q);
-					exampleCount = 0;
-					for (Pair<String, String> example : ioExamples) {
-						int inputLen = example.first.length();
-						int outputLen = example.second.length();
-						FuncDecl e = eFuncs[exampleCount];
-						
-						for (int i = 0; i <= inputLen; i++) {
-							for (int j = 0; j <= outputLen; j++) {
-								Expr exp1 = e.apply(ctx.mkInt(i), ctx.mkInt(j), stateInt);
-								if (m.evaluate(exp1, false).isTrue()) {
-									System.out.println("e(" + i + ", " + j + ", " + stateInt + ")");
-								}
-							}
-						}
-						exampleCount++;
-					}
-				}
-				
-				/* d1 and d2 */
-			}		
-		}
-		
 		
 		/* Reconstruct transducer */
 		
@@ -608,6 +567,59 @@ public class Constraints {
 			long stopTime = System.nanoTime();
 			System.out.println((stopTime - startTime));
 			System.out.println((stopTime - startTime) / 1000000000);
+			
+			/* Debug */
+			if (debug) { 
+				// System.out.println(solver.toString());
+				// System.out.println(m.getFuncInterp(x));
+				System.out.println(m.getFuncInterp(d1));
+				System.out.println(m.getFuncInterp(d2));
+				System.out.println(m.getFuncInterp(out_len));
+					
+				/* for which is x(q_R, q, q_T) set to TRUE? */
+				for (int i = 0; i < numStates; i++) {
+					for (Integer sourceState : source.getStates()) {
+						for (Integer targetState : target.getStates()) {
+							Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
+							Expr<IntSort> stateInt = ctx.mkInt(i);
+							Expr<IntSort> targetInt = ctx.mkInt(targetState);
+								
+							Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
+							if (m.evaluate(exp1, false).isTrue()) {
+								System.out.println("x(" + sourceState + ", " + stateInt + ", " + targetState + ")");
+								}
+						}
+					}
+				}
+					
+				/* for which values is e_k(i, j, q) set to TRUE? */
+				exampleCount = 0;
+				for (Pair<String, String> example : ioExamples) {
+					int inputLen = example.first.length();
+					int outputLen = example.second.length();
+					System.out.println(example.first);
+					System.out.println(example.second);
+						
+					FuncDecl e = eFuncs[exampleCount];
+							
+					for (int i = 0; i <= inputLen; i++) {
+						for (int j = 0; j <= outputLen; j++) {
+							for (int q = 0; q < numStates; q++) {
+								Expr<IntSort> stateInt = ctx.mkInt(q);
+								Expr exp1 = e.apply(ctx.mkInt(i), ctx.mkInt(j), stateInt);
+								if (m.evaluate(exp1, false).isTrue()) {
+									String inputStr = example.first.substring(0, i);
+									String outputStr = example.second.substring(0, j);
+									System.out.println("e_" + exampleCount + "(" + inputStr + ", " + outputStr + ", " + stateInt + ")");
+								}
+							}
+						}
+					}
+					exampleCount++;
+				}
+					
+					/* d1 and d2 */	
+		    }
 			
 			for (int q1 = 0; q1 < numStates; q1++) {
 				for (int move : alphabetMap.values())  { 
