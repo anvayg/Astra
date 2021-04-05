@@ -587,7 +587,7 @@ public class Constraints {
 							Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
 							if (m.evaluate(exp1, false).isTrue()) {
 								System.out.println("x(" + sourceState + ", " + stateInt + ", " + targetState + ")");
-								}
+							}
 						}
 					}
 				}
@@ -618,9 +618,35 @@ public class Constraints {
 					exampleCount++;
 				}
 					
-					/* d1 and d2 */	
+				/* d1 and d2 */	
+				for (int q1 = 0; q1 < numStates; q1++) {
+					for (int move : alphabetMap.values())  { 
+						Character input = revAlphabetMap.get(move);
+						Expr state = ctx.mkInt(q1);
+						Expr a = ctx.mkInt(move); 
+						
+						/* get state to */
+						Expr d2exp = d2.apply(state, a);
+						int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+						
+						/* output_len */
+						Expr outputLenExpr = out_len.apply(state, a);
+						int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+						
+						/* get output */
+						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+						for (int i = 0; i < outputLen; i++) {
+							Expr<IntSort> index = ctx.mkInt(i);
+							Expr d1exp = d1.apply(state, a, index);
+							int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+							Character output = revAlphabetMap.get(outMove);
+							outputFunc.add(new CharConstant(output));
+						}
+					}
+				}
 		    }
 			
+			/* Add transitions to FT */
 			for (int q1 = 0; q1 < numStates; q1++) {
 				for (int move : alphabetMap.values())  { 
 					Character input = revAlphabetMap.get(move);

@@ -250,9 +250,9 @@ public class ConstraintsTest {
         int[] fraction = new int[] {1, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        examples.add(new Pair<String, String>("b;", ";"));
+        examples.add(new Pair<String, String>("b;", "a;"));
         examples.add(new Pair<String, String>("a;", "a;")); 
-        customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 4, 2, fraction, examples, false);
+        customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, true);
 	}
 	
 	
