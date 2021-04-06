@@ -1,5 +1,7 @@
 package z3;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -11,6 +13,7 @@ import org.sat4j.specs.TimeoutException;
 import com.microsoft.z3.Context;
 
 import automata.SFAOperations;
+import automata.SFTOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
@@ -217,7 +220,7 @@ public class ConstraintsTest {
 	}
 	
 	/* testing function with examples as well */
-	static void customConstraintsWithExamplesTest(Context ctx, SFA<CharPred, Character> source, 
+	static SFT<CharPred, CharFunc, Character> customConstraintsWithExamplesTest(Context ctx, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
 			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException {
 		Set<Character> alphabetSet = SFAOperations.alphabetSet(source, target, ba);
@@ -230,7 +233,7 @@ public class ConstraintsTest {
 		
 		Constraints c = new Constraints(ctx, sourceTotal, targetTotal, alphabetMap, ba);
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, debug);
-		System.out.println(mySFT.toDotString(ba));
+		return mySFT;
 	}
 	
 	static void constraintsTest5(Context ctx) throws TimeoutException {
@@ -252,7 +255,14 @@ public class ConstraintsTest {
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("b;", "a;"));
         examples.add(new Pair<String, String>("a;", "a;")); 
-        customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, true);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, true);
+        System.out.println(synthSFT.toDotString(ba));
+        
+        String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
+        assertTrue(exampleOutput1.equals("a;"));
+        
+        String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
+        assertTrue(exampleOutput2.equals("a;"));
 	}
 	
 	

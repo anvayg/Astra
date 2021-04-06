@@ -35,6 +35,7 @@ public class SFTOperations {
 							outputStr.append(out);
 						}
 					}
+					state = transition.to;
 				}
 			}
 		}
