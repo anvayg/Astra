@@ -254,15 +254,15 @@ public class ConstraintsTest {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("b;", "a;"));
-        examples.add(new Pair<String, String>("a;", "a;")); 
+        examples.add(new Pair<String, String>("a;", ";;")); 
         SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, true);
         System.out.println(synthSFT.toDotString(ba));
         
-        String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
-        assertTrue(exampleOutput1.equals("a;"));
+        // String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
+        // assertTrue(exampleOutput1.equals("a;"));
         
-        String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
-        assertTrue(exampleOutput2.equals("a;"));
+        // String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
+        // assertTrue(exampleOutput2.equals("a;"));
 	}
 	
 	
@@ -277,7 +277,7 @@ public class ConstraintsTest {
         // constraintsTest2(ctx);
         // constraintsTest3(ctx);
         // constraintsTest4(ctx);
-        constraintsTest5(ctx);
+        // constraintsTest5(ctx);
         constraintsTest6(ctx);
 	}
 	

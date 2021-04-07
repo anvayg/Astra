@@ -284,7 +284,7 @@ public class Constraints {
 					}
 					
 					/* make big constraint */
-					// solver.add(ctx.mkImplies(xExpr, consequent));
+					solver.add(ctx.mkImplies(xExpr, consequent));
 				}
 			}
 		}
@@ -440,7 +440,7 @@ public class Constraints {
 						
 					for (int l = 0; l < outputLen; l++) {
 						Expr c = ctx.mkNot(e.apply(inputLength, ctx.mkInt(l), stateInt));
-						solver.add(c);
+						solver.add(c); 	
 					}
 			}
 	
@@ -516,7 +516,9 @@ public class Constraints {
 								Expr lenEq = ctx.mkEq(outLenExpr, zero);
 								Expr eExprPrime = e.apply(ctx.mkInt(i + 1), outputPosition, qPrime);
 								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
-								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
+								Expr c = ctx.mkIff(ctx.mkAnd(lenEq, inputEq), ctx.mkAnd(eExprPrime, xExprPrime));
+//								Expr c = ctx.mkAnd(ctx.mkIff(lenEq, eExprPrime), 
+//										ctx.mkIff(lenEq, xExprPrime));
 								
 								/* loop for the rest */
 								Expr consequent = ctx.mkAnd(outputLe, c);
@@ -535,14 +537,16 @@ public class Constraints {
 										stringEqualities = ctx.mkAnd(stringEqualities, eq);
 									}
 									
-									// moved stringEqualities to consequent, see what happens
-									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
+									c = ctx.mkIff(ctx.mkAnd(lenEq, inputEq), ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
+//									c = ctx.mkAnd(ctx.mkIff(lenEq, stringEqualities), 
+//											ctx.mkIff(lenEq, eExprPrime), 
+//											ctx.mkIff(lenEq, xExprPrime));
 									consequent = ctx.mkAnd(consequent, c);
 								}
 								
 								
 								/* make big constraint */
-								Expr antecedent = ctx.mkAnd(eExpr, xExpr, inputEq);
+								Expr antecedent = ctx.mkAnd(eExpr, xExpr);
 								solver.add(ctx.mkImplies(antecedent, consequent));
 							}
 						}
@@ -570,11 +574,37 @@ public class Constraints {
 			
 			/* Debug */
 			if (debug) { 
-				// System.out.println(solver.toString());
-				// System.out.println(m.getFuncInterp(x));
-				System.out.println(m.getFuncInterp(d1));
-				System.out.println(m.getFuncInterp(d2));
-				System.out.println(m.getFuncInterp(out_len));
+				System.out.println(solver.toString());
+				
+				/* d1 and d2 */	
+				for (int q1 = 0; q1 < numStates; q1++) {
+					for (int move : alphabetMap.values())  { 
+						Character input = revAlphabetMap.get(move);
+						Expr state = ctx.mkInt(q1);
+						Expr a = ctx.mkInt(move); 
+						
+						/* get state to */
+						Expr d2exp = d2.apply(state, a);
+						int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+						
+						/* output_len */
+						Expr outputLenExpr = out_len.apply(state, a);
+						int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+						
+						/* get output */
+						StringBuilder outputStr = new StringBuilder("");
+						for (int i = 0; i < outputLen; i++) {
+							Expr<IntSort> index = ctx.mkInt(i);
+							Expr d1exp = d1.apply(state, a, index);
+							int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+							Character output = revAlphabetMap.get(outMove);
+							outputStr.append(output);
+						}
+						
+						/* print d1, d2 combined for convenience */
+						System.out.println("d(" + q1 + ", " + input + ", " + outputStr + ", " + q2 + ")");
+					}
+				}
 					
 				/* for which is x(q_R, q, q_T) set to TRUE? */
 				for (int i = 0; i < numStates; i++) {
@@ -616,33 +646,6 @@ public class Constraints {
 						}
 					}
 					exampleCount++;
-				}
-					
-				/* d1 and d2 */	
-				for (int q1 = 0; q1 < numStates; q1++) {
-					for (int move : alphabetMap.values())  { 
-						Character input = revAlphabetMap.get(move);
-						Expr state = ctx.mkInt(q1);
-						Expr a = ctx.mkInt(move); 
-						
-						/* get state to */
-						Expr d2exp = d2.apply(state, a);
-						int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
-						
-						/* output_len */
-						Expr outputLenExpr = out_len.apply(state, a);
-						int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
-						
-						/* get output */
-						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
-						for (int i = 0; i < outputLen; i++) {
-							Expr<IntSort> index = ctx.mkInt(i);
-							Expr d1exp = d1.apply(state, a, index);
-							int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
-							Character output = revAlphabetMap.get(outMove);
-							outputFunc.add(new CharConstant(output));
-						}
-					}
 				}
 		    }
 			
