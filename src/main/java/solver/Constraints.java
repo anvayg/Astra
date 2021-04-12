@@ -297,7 +297,7 @@ public class Constraints {
 		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
 		
 		/* C(0) = 0 */
-		// solver.add(ctx.mkEq(energy.apply(zero), zero));
+		solver.add(ctx.mkEq(energy.apply(zero), zero));
 		
 		/* declare edit-dist: Q x \Sigma -> Z */
 		Sort[] argsToEd = new Sort[]{ I, I };
@@ -314,9 +314,6 @@ public class Constraints {
 				
 				/* make variable out_len(q, a) */
 				Expr outLenExpr = out_len.apply(q, a);
-					
-				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
-				Expr qRPrime = dR.apply(qR, a);
 				
 				/* make variable q' = d2(q, a) */
 				Expr qPrime = d2.apply(q, a);
@@ -350,7 +347,7 @@ public class Constraints {
 				
 				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
 				Expr lenNotZero = ctx.mkNot(lenEq);
-				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkSub(outLenExpr, ctx.mkInt(1))); 	// check mkSub
+				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkSub(outLenExpr, ctx.mkInt(1))); 	
 				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
 				
 				/* \neg (k = 0) ==> ed_dist(q, a) = k */
@@ -380,7 +377,7 @@ public class Constraints {
 					/* ed_dist constraint 2 */
 					antecedent = ctx.mkAnd(xExpr, negDisjunct);
 					consequent = ctx.mkAnd(impl1, impl3);
-					// solver.add(ctx.mkImplies(antecedent, consequent)); 
+					solver.add(ctx.mkImplies(antecedent, consequent)); 
 				}
 				
 			}
@@ -400,21 +397,29 @@ public class Constraints {
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
 			
-			/* declare function e_k: k x input_position x output_position x Q */
-			Sort[] args = new Sort[] { I, I, I };
-			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, B);
+			/* declare function e_k: k x input_position -> (output_position x Q) */
+			Sort[] args = new Sort[] { I, I };
+			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, I);
 			FuncDecl e = eFuncs[exampleCount];
 			
-			/* initial position : e_k(0, 0, q_0) */
-			solver.add(e.apply(zero, zero, zero));
+			/* initial position : e_k(0, 0) = q_0 */
+			solver.add(ctx.mkEq(e.apply(zero, zero), zero));
 			
 			int inputLen = ioExample.first.length();
 			Expr<IntSort> inputLength = ctx.mkInt(inputLen);
 			int outputLen = ioExample.second.length();
 			Expr<IntSort> outputLength = ctx.mkInt(outputLen);
 			
-			/* final position : \bigvee_{q \in Q} e_k(l1, l2, q) \wedge x(q_R, q, q_T) \wedge f_R(q_R) \wedge f_T(q_T) */
-			Expr bigOr = ctx.mkFalse();
+			/* 0 <= e_k(l1, l2) < numStates */
+			for (int l1 = 0; l1 <= inputLen; l1++) {
+				for (int l2 = 0; l2 <= outputLen; l2++) {
+					Expr eExpr = e.apply(ctx.mkInt(l1), ctx.mkInt(l2));
+					solver.add(ctx.mkLe(zero, eExpr));
+					solver.add(ctx.mkLt(eExpr, numStatesInt));
+				}
+			}
+			
+			/* final position : e_k(l1, l2) = q \wedge x(q_R, q, q_T) \rightarrow f_R(q_R) \wedge f_T(q_T) */
 			for (int i = 0; i < numStates; i++) {
 				for (Integer sourceState : source.getStates()) {
 					for (Integer targetState : target.getStates()) {
@@ -422,25 +427,25 @@ public class Constraints {
 						Expr<IntSort> stateInt = ctx.mkInt(i);
 						Expr<IntSort> targetInt = ctx.mkInt(targetState);
 						
-						Expr exp1 = e.apply(inputLength, outputLength, stateInt);
+						Expr exp1 = ctx.mkEq(e.apply(inputLength, outputLength), stateInt);
 						Expr exp2 = x.apply(sourceInt, stateInt, targetInt);
 						Expr exp3 = f_R.apply(sourceInt);
 						Expr exp4 = f_T.apply(targetInt);
 						
-						Expr c = ctx.mkAnd(exp1, exp2, exp3, exp4);
-						bigOr = ctx.mkOr(bigOr, c);
+						Expr antecedent = ctx.mkAnd(exp1, exp2);
+						Expr consequent = ctx.mkAnd(exp3, exp4);
+						solver.add(ctx.mkImplies(antecedent, consequent));
 					}
 				}
 			}
-			solver.add(bigOr);
 			
-			/* not e(l1, l, q) where l < l2 */
+			/* not e(l1, l) = q where l < l2, should not be needed anymore? */
 			for (int i = 0; i < numStates; i++) {
 					Expr<IntSort> stateInt = ctx.mkInt(i);
 						
 					for (int l = 0; l < outputLen; l++) {
-						Expr c = ctx.mkNot(e.apply(inputLength, ctx.mkInt(l), stateInt));
-						solver.add(c); 	
+						Expr c = ctx.mkNot(ctx.mkEq(e.apply(inputLength, ctx.mkInt(l)), stateInt));
+						// solver.add(c); 	
 					}
 			}
 	
@@ -507,25 +512,23 @@ public class Constraints {
 								
 								Expr outputLe = ctx.mkLe(outLenExpr, possibleOutputLength);
 								
-								/* e_k(i, j, q) */ 
-								Expr eExpr = e.apply(inputPosition, outputPosition, q);
+								/* e_k(i, j) = q */ 
+								Expr eExpr = ctx.mkEq(e.apply(inputPosition, outputPosition), q);
 								
-								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1, j, q') \wedge x(qR', q', qT) */
+								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1, j) = q' \wedge x(qR', q', qT) */
 								
 								/* special case for 0 */
 								Expr lenEq = ctx.mkEq(outLenExpr, zero);
-								Expr eExprPrime = e.apply(ctx.mkInt(i + 1), outputPosition, qPrime);
+								Expr eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1), outputPosition), qPrime);
 								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
-								Expr c = ctx.mkIff(ctx.mkAnd(lenEq, inputEq), ctx.mkAnd(eExprPrime, xExprPrime));
-//								Expr c = ctx.mkAnd(ctx.mkIff(lenEq, eExprPrime), 
-//										ctx.mkIff(lenEq, xExprPrime));
+								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
 								
 								/* loop for the rest */
 								Expr consequent = ctx.mkAnd(outputLe, c);
 								for (int l = 0; l < possibleOutputLen; l++) { 
 									int outputGenLength = l + 1;
 									lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputGenLength));
-									eExprPrime = e.apply(ctx.mkInt(i + 1), ctx.mkInt(j + outputGenLength), qPrime);
+									eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1), ctx.mkInt(j + outputGenLength)), qPrime);
 									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
 									
 									/* equalities */
@@ -537,16 +540,13 @@ public class Constraints {
 										stringEqualities = ctx.mkAnd(stringEqualities, eq);
 									}
 									
-									c = ctx.mkIff(ctx.mkAnd(lenEq, inputEq), ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
-//									c = ctx.mkAnd(ctx.mkIff(lenEq, stringEqualities), 
-//											ctx.mkIff(lenEq, eExprPrime), 
-//											ctx.mkIff(lenEq, xExprPrime));
+									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
 									consequent = ctx.mkAnd(consequent, c);
 								}
 								
 								
 								/* make big constraint */
-								Expr antecedent = ctx.mkAnd(eExpr, xExpr);
+								Expr antecedent = ctx.mkAnd(eExpr, xExpr, inputEq);
 								solver.add(ctx.mkImplies(antecedent, consequent));
 							}
 						}
@@ -558,6 +558,14 @@ public class Constraints {
 			exampleCount++;
 		}
 		
+		/* Debugging: enforce desired constraints */
+		Expr intTwo = ctx.mkInt(2);
+		Expr intOne = ctx.mkInt(1);
+		solver.add(ctx.mkEq(d1.apply(zero, intTwo, zero), intTwo));
+		solver.add(ctx.mkEq(d2.apply(zero, intTwo), (Expr) zero));
+		solver.add(ctx.mkEq(out_len.apply(zero, intTwo), (Expr) intOne));
+		
+		System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
@@ -634,15 +642,11 @@ public class Constraints {
 							
 					for (int i = 0; i <= inputLen; i++) {
 						for (int j = 0; j <= outputLen; j++) {
-							for (int q = 0; q < numStates; q++) {
-								Expr<IntSort> stateInt = ctx.mkInt(q);
-								Expr exp1 = e.apply(ctx.mkInt(i), ctx.mkInt(j), stateInt);
-								if (m.evaluate(exp1, false).isTrue()) {
-									String inputStr = example.first.substring(0, i);
-									String outputStr = example.second.substring(0, j);
-									System.out.println("e_" + exampleCount + "(" + inputStr + ", " + outputStr + ", " + stateInt + ")");
-								}
-							}
+							Expr exp1 = e.apply(ctx.mkInt(i), ctx.mkInt(j));
+							int state = ((IntNum) m.evaluate(exp1, false)).getInt();
+							String inputStr = example.first.substring(0, i);
+							String outputStr = example.second.substring(0, j);
+							System.out.println("e_" + exampleCount + "(" + inputStr + ", " + outputStr + ", " + state + ")");
 						}
 					}
 					exampleCount++;
