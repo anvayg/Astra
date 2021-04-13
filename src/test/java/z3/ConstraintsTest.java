@@ -92,24 +92,24 @@ public class ConstraintsTest {
 		
 		// SFA0.7: SFA that reads (;| (a|b);)
 		List<SFAMove<CharPred, Character>> transitions07 = new LinkedList<SFAMove<CharPred, Character>>();
-		//transitions07.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred(';')));
+		transitions07.add(new SFAInputMove<CharPred, Character>(0, 3, new CharPred(';')));
 		transitions07.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
 		// transitions07.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('a')));
-		// transitions07.add(new SFAInputMove<CharPred, Character>(0, 2, new CharPred('b')));
+		transitions07.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('b')));
 		transitions07.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred(';')));
 		List<Integer> finStates07 = new LinkedList<Integer>();
-		// finStates07.add(1);
+		finStates07.add(3);
 		finStates07.add(2);
 		mySFA07 = SFA.MkSFA(transitions07, 0, finStates07, ba, false, false);
 		
 		// SFA0.8: SFA that reads (; | b;)
 		List<SFAMove<CharPred, Character>> transitions08 = new LinkedList<SFAMove<CharPred, Character>>();
-		// transitions08.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred(';')));
+		transitions08.add(new SFAInputMove<CharPred, Character>(0, 3, new CharPred(';')));
 		transitions08.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('b')));
 		// transitions08.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('a')));
 		transitions08.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred(';')));
 		List<Integer> finStates08 = new LinkedList<Integer>();
-		// finStates08.add(1);
+		finStates08.add(3);
 		finStates08.add(2);
 		mySFA08 = SFA.MkSFA(transitions08, 0, finStates08, ba, false, false);
 		
@@ -242,9 +242,9 @@ public class ConstraintsTest {
         
         // try to add example
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        // examples.add(new Pair<String, String>(";", ";")); 
+        examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
-        // examples.add(new Pair<String, String>("b;", "b;"));
+        examples.add(new Pair<String, String>("b;", "b;"));
         SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
@@ -254,8 +254,8 @@ public class ConstraintsTest {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         
-        // examples.add(new Pair<String, String>("b;", ";"));
-        // examples.add(new Pair<String, String>("a;", "a;")); 
+        examples.add(new Pair<String, String>("b;", ";"));
+        examples.add(new Pair<String, String>("a;", "a;")); 
         examples.add(new Pair<String, String>(";", ";"));
         SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, true);
         System.out.println(synthSFT.toDotString(ba));
@@ -279,8 +279,8 @@ public class ConstraintsTest {
         // constraintsTest2(ctx);
         // constraintsTest3(ctx);
         // constraintsTest4(ctx);
-        constraintsTest5(ctx);
-        // constraintsTest6(ctx);
+        // constraintsTest5(ctx);
+        constraintsTest6(ctx);
 	}
 	
 }

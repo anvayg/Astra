@@ -588,9 +588,7 @@ public class Constraints {
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) intOne));
 		
-		// solver.add(ctx.mkEq(d2.apply(zero, intTwo), intOne));
-		
-		System.out.println(solver.toString());
+//		System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
