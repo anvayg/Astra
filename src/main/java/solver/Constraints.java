@@ -343,7 +343,11 @@ public class Constraints {
 					solver.add(ctx.mkLt(eExprSecond, numStatesInt));
 			}
 			
-			/* final position : e_k(l1, l2) = q \wedge x(q_R, q, q_T) \rightarrow f_R(q_R) \wedge f_T(q_T) */
+			/* final position : e_k(l1).first = l2 */
+			Expr eExprFirst = first.apply(e.apply(inputLength));
+			solver.add(ctx.mkEq(eExprFirst, outputLength));
+			
+			/* e_k(l1).second = q \wedge x(q_R, q, q_T) \rightarrow f_R(q_R) \wedge f_T(q_T) */
 			for (int i = 0; i < numStates; i++) {
 				for (Integer sourceState : source.getStates()) {
 					for (Integer targetState : target.getStates()) {
@@ -351,7 +355,8 @@ public class Constraints {
 						Expr<IntSort> stateInt = ctx.mkInt(i);
 						Expr<IntSort> targetInt = ctx.mkInt(targetState);
 						
-						Expr exp1 = ctx.mkEq(e.apply(inputLength, outputLength), stateInt);
+						Expr eExprSecond = second.apply(e.apply(inputLength));
+						Expr exp1 = ctx.mkEq(eExprSecond, stateInt);
 						Expr exp2 = x.apply(sourceInt, stateInt, targetInt);
 						Expr exp3 = f_R.apply(sourceInt);
 						Expr exp4 = f_T.apply(targetInt);
@@ -363,13 +368,14 @@ public class Constraints {
 				}
 			}
 			
-			/* not e(l1, l) = q where l < l2, should not be needed anymore? */
+			/* not e(l1).first < l2, should not be needed anymore? */
 			for (int i = 0; i < numStates; i++) {
 					Expr<IntSort> stateInt = ctx.mkInt(i);
 						
 					for (int l = 0; l < outputLen; l++) {
-						Expr c = ctx.mkNot(ctx.mkEq(e.apply(inputLength, ctx.mkInt(l)), stateInt));
-						// solver.add(c); 	
+						eExprFirst = first.apply(e.apply(inputLength));
+						Expr c = ctx.mkNot(ctx.mkLt(eExprFirst, outputLength));
+						// solver.add(c);
 					}
 			}
 	
@@ -436,14 +442,14 @@ public class Constraints {
 								
 								Expr outputLe = ctx.mkLe(outLenExpr, possibleOutputLength);
 								
-								/* e_k(i, j) = q */ 
-								Expr eExpr = ctx.mkEq(e.apply(inputPosition, outputPosition), q);
+								/* e_k(i) = (j, q) */
+								Expr eExpr = ctx.mkEq(e.apply(inputPosition), pair.mkDecl().apply(outputPosition, q));
 								
-								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1, j) = q' \wedge x(qR', q', qT) */
+								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1) = (j, q') \wedge x(qR', q', qT) */
 								
 								/* special case for 0 */
 								Expr lenEq = ctx.mkEq(outLenExpr, zero);
-								Expr eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1), outputPosition), qPrime);
+								Expr eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1)), pair.mkDecl().apply(outputPosition, qPrime));
 								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
 								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
 								
@@ -452,7 +458,7 @@ public class Constraints {
 								for (int l = 0; l < possibleOutputLen; l++) { 
 									int outputGenLength = l + 1;
 									lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputGenLength));
-									eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1), ctx.mkInt(j + outputGenLength)), qPrime);
+									eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1)), pair.mkDecl().apply(ctx.mkInt(j + outputGenLength), qPrime));
 									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
 									
 									/* equalities */
@@ -584,7 +590,7 @@ public class Constraints {
 		solver.add(ctx.mkEq(d2.apply(zero, intTwo), (Expr) zero));
 		solver.add(ctx.mkEq(out_len.apply(zero, intTwo), (Expr) intOne));
 		
-		System.out.println(solver.toString());
+		// System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
@@ -649,24 +655,25 @@ public class Constraints {
 					}
 				}
 					
-				/* for which values is e_k(i, j, q) set to TRUE? */
+				/* values of e(i) */
 				exampleCount = 0;
 				for (Pair<String, String> example : ioExamples) {
 					int inputLen = example.first.length();
-					int outputLen = example.second.length();
 					System.out.println(example.first);
 					System.out.println(example.second);
 						
 					FuncDecl e = eFuncs[exampleCount];
 							
 					for (int i = 0; i <= inputLen; i++) {
-						for (int j = 0; j <= outputLen; j++) {
-							Expr exp1 = e.apply(ctx.mkInt(i), ctx.mkInt(j));
-							int state = ((IntNum) m.evaluate(exp1, false)).getInt();
-							String inputStr = example.first.substring(0, i);
-							String outputStr = example.second.substring(0, j);
-							System.out.println("e_" + exampleCount + "(" + inputStr + ", " + outputStr + ", " + state + ")");
-						}
+						Expr eExpr = e.apply(ctx.mkInt(i));
+						Expr eExprFirst = first.apply(eExpr);
+						Expr eExprSecond = second.apply(eExpr);
+						
+						int j = ((IntNum) m.evaluate(eExprFirst, false)).getInt();
+						int state = ((IntNum) m.evaluate(eExprSecond, false)).getInt();
+						String inputStr = example.first.substring(0, i);
+						String outputStr = example.second.substring(0, j);
+						System.out.println("e_" + exampleCount + "(" + inputStr + ", " + outputStr + ", " + state + ")");
 					}
 					exampleCount++;
 				}
