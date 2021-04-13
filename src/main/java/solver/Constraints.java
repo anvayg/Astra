@@ -300,7 +300,7 @@ public class Constraints {
 				 							new Sort[] { I, I } // types of projection operators
 				 						);
 		FuncDecl first = pair.getFieldDecls()[0]; // declarations are for projections
-		FuncDecl second = pair.getFieldDecls()[0];
+		FuncDecl second = pair.getFieldDecls()[1];
 		
 		/* example constraints */
 		FuncDecl[] eFuncs = new FuncDecl[ioExamples.size()];
@@ -313,6 +313,8 @@ public class Constraints {
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
+			System.out.println(Arrays.toString(inputArr));
+			System.out.println(Arrays.toString(outputArr));
 			
 			/* declare function e_k: k x input_position -> (output_position, Q) */
 			Sort[] args = new Sort[] {I};
@@ -329,8 +331,8 @@ public class Constraints {
 			Expr<IntSort> outputLength = ctx.mkInt(outputLen);
 			
 			/* 0 <= e_k(l1).first <= outputLen and 0 <= e_k(l1).second < numStates */
-			for (int l1 = 0; l1 <= inputLen; l1++) {
-					Expr eExpr = e.apply(ctx.mkInt(l1));
+			for (int l = 0; l <= inputLen; l++) {
+					Expr eExpr = e.apply(ctx.mkInt(l));
 					Expr eExprFirst = first.apply(eExpr);
 					Expr eExprSecond = second.apply(eExpr);
 					
@@ -363,20 +365,16 @@ public class Constraints {
 						
 						Expr antecedent = ctx.mkAnd(exp1, exp2);
 						Expr consequent = ctx.mkAnd(exp3, exp4);
-						solver.add(ctx.mkImplies(antecedent, consequent));
+						// solver.add(ctx.mkImplies(antecedent, consequent));
 					}
 				}
 			}
 			
-			/* not e(l1).first < l2, should not be needed anymore? */
-			for (int i = 0; i < numStates; i++) {
-					Expr<IntSort> stateInt = ctx.mkInt(i);
-						
-					for (int l = 0; l < outputLen; l++) {
-						eExprFirst = first.apply(e.apply(inputLength));
-						Expr c = ctx.mkNot(ctx.mkLt(eExprFirst, outputLength));
-						// solver.add(c);
-					}
+			/* not e(l1).first < l2, should not be needed anymore? */		
+			for (int l = 0; l < outputLen; l++) {
+				eExprFirst = first.apply(e.apply(inputLength));
+				Expr c = ctx.mkNot(ctx.mkLt(eExprFirst, outputLength));
+				// solver.add(c);
 			}
 	
 			
@@ -496,7 +494,7 @@ public class Constraints {
 		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
 		
 		/* C(0) = 0 */
-		solver.add(ctx.mkEq(energy.apply(zero), zero));
+		// solver.add(ctx.mkEq(energy.apply(zero), zero));
 		
 		/* declare edit-dist: Q x \Sigma -> Z */
 		Sort[] argsToEd = new Sort[]{ I, I };
@@ -586,11 +584,13 @@ public class Constraints {
 		/* Debugging: enforce desired constraints */
 		Expr intTwo = ctx.mkInt(2);
 		Expr intOne = ctx.mkInt(1);
-		solver.add(ctx.mkEq(d1.apply(zero, intTwo, zero), intTwo));
-		solver.add(ctx.mkEq(d2.apply(zero, intTwo), (Expr) zero));
-		solver.add(ctx.mkEq(out_len.apply(zero, intTwo), (Expr) intOne));
+//		solver.add(ctx.mkEq(d1.apply(zero, zero, zero), intOne));
+//		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
+//		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) intOne));
 		
-		// System.out.println(solver.toString());
+		// solver.add(ctx.mkEq(d2.apply(zero, intTwo), intOne));
+		
+		System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
