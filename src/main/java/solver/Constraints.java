@@ -466,7 +466,7 @@ public class Constraints {
 		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
 		
 		/* C(0) = 0 */
-		// solver.add(ctx.mkEq(energy.apply(zero), zero));
+		solver.add(ctx.mkEq(energy.apply(zero), zero));
 		
 		/* declare edit-dist: Q x \Sigma -> Z */
 		Sort[] argsToEd = new Sort[]{ I, I };
@@ -523,6 +523,14 @@ public class Constraints {
 				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
 				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
 				
+				/* ed_dist constraint 1 */
+				Expr consequent = ctx.mkAnd(impl1, impl2);
+				solver.add(ctx.mkImplies(disjunct, consequent));
+					
+				/* ed_dist constraint 2 */
+				consequent = ctx.mkAnd(impl1, impl3);
+				solver.add(ctx.mkImplies(negDisjunct, consequent));
+				
 				/* energy: C(q) >= C(d2(q, a)) + (m - (n x ed_dist(q, a))) */
 				Expr cQ = energy.apply(q);
 				Expr cQPrime = energy.apply(qPrime);
@@ -530,25 +538,9 @@ public class Constraints {
 				Expr<IntSort> n = ctx.mkInt(fraction[1]);
 				Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
 				Expr c = ctx.mkGe(cQ, ctx.mkAdd(cQPrime, diff));
-				// solver.add(c); 
+				solver.add(c); 
 				
-				for (Integer targetFrom : target.getStates()) {
-					Expr<IntSort> qT = ctx.mkInt(targetFrom);
-					
-					/* x(q_R, q, q_T) */
-					Expr xExpr = x.apply(qR, q, qT);
-					
-					/* ed_dist constraint 1 */
-					Expr antecedent = ctx.mkAnd(xExpr, disjunct);
-					Expr consequent = ctx.mkAnd(impl1, impl2);
-					// solver.add(ctx.mkImplies(antecedent, consequent));
-					
-					/* ed_dist constraint 2 */
-					antecedent = ctx.mkAnd(xExpr, negDisjunct);
-					consequent = ctx.mkAnd(impl1, impl3);
-					// solver.add(ctx.mkImplies(antecedent, consequent)); 
-				}
-				
+				// TODO: add condition on energy in final states
 			}
 		}
 		
@@ -560,7 +552,7 @@ public class Constraints {
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) intOne));
 		
-//		System.out.println(solver.toString());
+		System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
@@ -606,6 +598,11 @@ public class Constraints {
 						
 						/* print d1, d2 combined for convenience */
 						System.out.println("d(" + q1 + ", " + input + ", " + outputStr + ", " + q2 + ")");
+						
+						/* edit-distance of transitions */
+						Expr edDistExpr = edDist.apply(state, a);
+						int editDist = ((IntNum) m.evaluate(edDistExpr, false)).getInt();
+						System.out.println("edit-distance(" + q1 + ", " + move + ") = " + editDist);
 					}
 				}
 					
@@ -629,8 +626,7 @@ public class Constraints {
 				exampleCount = 0;
 				for (Pair<String, String> example : ioExamples) {
 					int inputLen = example.first.length();
-					System.out.println(example.first);
-					System.out.println(example.second);
+					System.out.println(example.first + " --> " + example.second);
 						
 					FuncDecl e = eFuncs[exampleCount];
 							
