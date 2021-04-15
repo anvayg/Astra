@@ -348,34 +348,6 @@ public class Constraints {
 			/* final position : e_k(l1).first = l2 */
 			Expr eExprFirst = first.apply(e.apply(inputLength));
 			solver.add(ctx.mkEq(eExprFirst, outputLength));
-			
-			/* e_k(l1).second = q \wedge x(q_R, q, q_T) \rightarrow f_R(q_R) \wedge f_T(q_T) */
-			for (int i = 0; i < numStates; i++) {
-				for (Integer sourceState : source.getStates()) {
-					for (Integer targetState : target.getStates()) {
-						Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
-						Expr<IntSort> stateInt = ctx.mkInt(i);
-						Expr<IntSort> targetInt = ctx.mkInt(targetState);
-						
-						Expr eExprSecond = second.apply(e.apply(inputLength));
-						Expr exp1 = ctx.mkEq(eExprSecond, stateInt);
-						Expr exp2 = x.apply(sourceInt, stateInt, targetInt);
-						Expr exp3 = f_R.apply(sourceInt);
-						Expr exp4 = f_T.apply(targetInt);
-						
-						Expr antecedent = ctx.mkAnd(exp1, exp2);
-						Expr consequent = ctx.mkAnd(exp3, exp4);
-						// solver.add(ctx.mkImplies(antecedent, consequent));
-					}
-				}
-			}
-			
-			/* not e(l1).first < l2, should not be needed anymore? */		
-			for (int l = 0; l < outputLen; l++) {
-				eExprFirst = first.apply(e.apply(inputLength));
-				Expr c = ctx.mkNot(ctx.mkLt(eExprFirst, outputLength));
-				// solver.add(c);
-			}
 	
 			
 			for (int n = 0; n < numStates; n++) {	// q 
