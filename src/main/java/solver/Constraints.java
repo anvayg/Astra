@@ -502,8 +502,9 @@ public class Constraints {
 					Expr<IntSort> index = ctx.mkInt(l);
 					Expr d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp;
+					Expr lt = ctx.mkLt(index, outLenExpr);
 					Expr eq = ctx.mkEq(a, d1exp);
-					disjunct = ctx.mkOr(disjunct, eq);
+					disjunct = ctx.mkOr(disjunct, ctx.mkAnd(lt, eq));
 				}
 
 				/* for condition where the output chars don't include 'a' */
@@ -531,16 +532,31 @@ public class Constraints {
 				consequent = ctx.mkAnd(impl1, impl3);
 				solver.add(ctx.mkImplies(negDisjunct, consequent));
 				
-				/* energy: C(q) >= C(d2(q, a)) + (m - (n x ed_dist(q, a))) */
+				/* energy: C(q) >= C(d2(q, a)) - (m - (n x ed_dist(q, a))) */
 				Expr cQ = energy.apply(q);
 				Expr cQPrime = energy.apply(qPrime);
 				Expr<IntSort> m = ctx.mkInt(fraction[0]);
 				Expr<IntSort> n = ctx.mkInt(fraction[1]);
 				Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
-				Expr c = ctx.mkGe(cQ, ctx.mkAdd(cQPrime, diff));
+				Expr c = ctx.mkGe(cQ, ctx.mkSub(cQPrime, diff));
 				solver.add(c); 
 				
-				// TODO: add condition on energy in final states
+				/* x(q_R, q, q_T) /\ f_R(q_R) /\ f_T(q_T) ==> C(q) >= 0 */
+				for (Integer targetFrom : target.getStates()) {
+ 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
+
+ 					/* x(q_R, q, q_T) */
+ 					Expr xExpr = x.apply(qR, q, qT);
+ 					
+ 					Expr fexp1 = f_R.apply(qR);
+ 					Expr fexp2 = f_T.apply(qT);
+ 					
+ 					/* we already have that x(q_R, q, q_T) /\ f_R(q_R) ==>  f_T(q_T), 
+ 					 * so maybe that conjunct can be removed? */
+ 					Expr antecedent = ctx.mkAnd(xExpr, fexp1, fexp2);
+ 					consequent = ctx.mkGe(energy.apply(q), zero);
+ 					solver.add(ctx.mkImplies(antecedent, consequent));
+				}
 			}
 		}
 		
@@ -552,7 +568,7 @@ public class Constraints {
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) intOne));
 		
-		System.out.println(solver.toString());
+//		System.out.println(solver.toString());
 		
 		/* Reconstruct transducer */
 		
@@ -573,9 +589,13 @@ public class Constraints {
 				
 				/* d1 and d2 */	
 				for (int q1 = 0; q1 < numStates; q1++) {
+					Expr state = ctx.mkInt(q1);
+					/* energy at q1: C(q1) */
+					int cQ = ((IntNum) m.evaluate(energy.apply(state), false)).getInt();
+					System.out.println("C(" + q1 + ")" + " = " + cQ);
+					
 					for (int move : alphabetMap.values())  { 
 						Character input = revAlphabetMap.get(move);
-						Expr state = ctx.mkInt(q1);
 						Expr a = ctx.mkInt(move); 
 						
 						/* get state to */
@@ -602,7 +622,7 @@ public class Constraints {
 						/* edit-distance of transitions */
 						Expr edDistExpr = edDist.apply(state, a);
 						int editDist = ((IntNum) m.evaluate(edDistExpr, false)).getInt();
-						System.out.println("edit-distance(" + q1 + ", " + move + ") = " + editDist);
+						System.out.println("edit-distance(" + q1 + ", " + input + ", " + outputStr + ") = " + editDist);
 					}
 				}
 					

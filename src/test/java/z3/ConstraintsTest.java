@@ -250,14 +250,14 @@ public class ConstraintsTest {
 	}
 	
 	static void constraintsTest6(Context ctx) throws TimeoutException {
-        int[] fraction = new int[] {1, 1};
+        int[] fraction = new int[] {1, 2};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         
         examples.add(new Pair<String, String>("b;", ";"));
         examples.add(new Pair<String, String>("a;", "a;")); 
         examples.add(new Pair<String, String>(";", ";"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, true);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 2, 2, fraction, examples, true);
         System.out.println(synthSFT.toDotString(ba));
         
         // String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
