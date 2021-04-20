@@ -202,24 +202,6 @@ public class Constraints {
 		/* C(q^0_R, q^0, q^0_T) = 0 */
 		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), zero));
 		
-		/* x(q_R, q, q_T) /\ f_R(q_R) -> f_T(q_T) */
-		for (int i = 0; i < numStates; i++) {
-			for (Integer sourceState : source.getStates()) {
-				for (Integer targetState : target.getStates()) {
-					Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
-					Expr<IntSort> stateInt = ctx.mkInt(i);
-					Expr<IntSort> targetInt = ctx.mkInt(targetState);
-					
-					Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
-					Expr exp2 = f_R.apply(sourceInt);
-					Expr antecedent = ctx.mkAnd(exp1, exp2);
-					Expr consequent = f_T.apply(targetInt);
-					Expr c = ctx.mkImplies(antecedent, consequent);
-					solver.add(c);
-				}
-			}
-		}
-		
 		
 		/* edit-distance constraints */
 		
@@ -234,9 +216,6 @@ public class Constraints {
 				
 				/* make variable out_len(q, a) */
 				Expr outLenExpr = out_len.apply(q, a);
-				
-				/* make variable q' = d2(q, a) */
-				Expr qPrime = d2.apply(q, a);
 				
 				/* make variable ed_dist(q, a) */
 				Expr edDistExpr = edDist.apply(q, a);
@@ -365,9 +344,9 @@ public class Constraints {
 					
 					/* C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
 					Expr cExprPrime = energy.apply(qRPrime, qPrime, qT);
-					Expr cGreaterExp = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
+					Expr cGreaterExpr = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
 					
-					Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExp));
+					Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExpr));
 					
 					
 					/* loop for the rest */
@@ -378,14 +357,37 @@ public class Constraints {
 						xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
 						
 						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
-						cGreaterExp = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
+						cGreaterExpr = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
 						
-						c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExp));
+						c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExpr));
 						consequent = ctx.mkAnd(consequent, c);
 					}
 					
 					/* make big constraint */
 					solver.add(ctx.mkImplies(xExpr, consequent));
+				}
+			}
+		}
+		
+		/* x(q_R, q, q_T) /\ f_R(q_R) -> f_T(q_T) /\ (C(q_R, q, q_T) >= 0) */
+		for (int i = 0; i < numStates; i++) {
+			for (Integer sourceState : source.getStates()) {
+				for (Integer targetState : target.getStates()) {
+					Expr<IntSort> sourceInt = ctx.mkInt(sourceState);
+					Expr<IntSort> stateInt = ctx.mkInt(i);
+					Expr<IntSort> targetInt = ctx.mkInt(targetState);
+					
+					Expr xExpr = x.apply(sourceInt, stateInt, targetInt);
+					Expr fRExp = f_R.apply(sourceInt);
+					Expr antecedent = ctx.mkAnd(xExpr, fRExp);
+					
+					Expr cExpr = energy.apply(sourceInt, stateInt, targetInt);
+					Expr cGreaterExp = ctx.mkGe(cExpr, zero);
+					Expr fTExp = f_T.apply(targetInt);
+					Expr consequent = ctx.mkAnd(fTExp, cGreaterExp);
+					
+					Expr c = ctx.mkImplies(antecedent, consequent);
+					solver.add(c);
 				}
 			}
 		}
