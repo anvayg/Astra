@@ -336,7 +336,7 @@ public class Constraints {
 					Expr cExpr = energy.apply(qR, q, qT);
 					
 					/* expressions for implications: out_len(q, a) = 0 ==> 
-					 * x(qR', q', qT) /\ C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff*/
+					 * x(qR', q', qT) /\ C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
 					
 					/* special case for 0 */
 					Expr lenEq = ctx.mkEq(outLenExpr, zero);
@@ -450,8 +450,8 @@ public class Constraints {
 			solver.add(ctx.mkEq(eExprFirst, outputLength));
 	
 			
-			for (int n = 0; n < numStates; n++) {	// q 
-				Expr<IntSort> q = ctx.mkInt(n);
+			for (int s = 0; s < numStates; s++) {	// q 
+				Expr<IntSort> q = ctx.mkInt(s);
 					
 				for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 					Integer stateFrom = sourceTransition.from;
@@ -481,6 +481,14 @@ public class Constraints {
 						outputChars[l] = d1exp;
 					}
 					
+					/* ed_dist(q, a) */
+					Expr edDistExpr = edDist.apply(q, a);
+					
+					/* m - (n x ed_dist(q, a)) */
+					Expr<IntSort> m = ctx.mkInt(fraction[0]);
+					Expr<IntSort> n = ctx.mkInt(fraction[1]);
+					Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
+					
 					for (Integer targetFrom : target.getStates()) {
 						Expr<IntSort> qT = ctx.mkInt(targetFrom);
 						
@@ -496,6 +504,9 @@ public class Constraints {
 						
 						/* x(q_R, q, q_T) */
 						Expr xExpr = x.apply(qR, q, qT);
+						
+						/* C(q_R, q, q_T) */
+						Expr cExpr = energy.apply(qR, q, qT);
 						
 						for (int i = 0; i < inputLen; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
 							for (int j = 0; j <= outputLen; j++) {	// but output is already completely generated
@@ -515,13 +526,19 @@ public class Constraints {
 								/* e_k(i) = (j, q) */
 								Expr eExpr = ctx.mkEq(e.apply(inputPosition), pair.mkDecl().apply(outputPosition, q));
 								
-								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1) = (j, q') \wedge x(qR', q', qT) */
+								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1) = (j, q') 
+								 * /\ x(qR', q', qT) /\ C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
 								
 								/* special case for 0 */
 								Expr lenEq = ctx.mkEq(outLenExpr, zero);
 								Expr eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1)), pair.mkDecl().apply(outputPosition, qPrime));
 								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
-								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime));
+								
+								/* C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
+								Expr cExprPrime = energy.apply(qRPrime, qPrime, qT);
+								Expr cGreaterExpr = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
+								
+								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime, cGreaterExpr));
 								
 								/* loop for the rest */
 								Expr consequent = ctx.mkAnd(outputLe, c);
@@ -530,6 +547,9 @@ public class Constraints {
 									lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputGenLength));
 									eExprPrime = ctx.mkEq(e.apply(ctx.mkInt(i + 1)), pair.mkDecl().apply(ctx.mkInt(j + outputGenLength), qPrime));
 									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
+									
+									cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
+									cGreaterExpr = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
 									
 									/* equalities */
 									Expr stringEqualities = ctx.mkTrue();
@@ -540,7 +560,7 @@ public class Constraints {
 										stringEqualities = ctx.mkAnd(stringEqualities, eq);
 									}
 									
-									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime)); 
+									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime, cGreaterExpr)); 
 									consequent = ctx.mkAnd(consequent, c);
 								}
 								
