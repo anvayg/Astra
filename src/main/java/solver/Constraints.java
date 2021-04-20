@@ -191,6 +191,17 @@ public class Constraints {
 			solver.add(c);
 		}
 		
+		/* declare edit-dist: Q x \Sigma -> Z */
+		Sort[] argsToEd = new Sort[]{ I, I };
+		FuncDecl<Sort> edDist = ctx.mkFuncDecl("ed_dist", argsToEd, I);
+		
+		/* declare C: Q -> Z */
+		Sort[] argsToC = new Sort[]{ I, I, I };
+		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
+		
+		/* C(q^0_R, q^0, q^0_T) = 0 */
+		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), zero));
+		
 		/* x(q_R, q, q_T) /\ f_R(q_R) -> f_T(q_T) */
 		for (int i = 0; i < numStates; i++) {
 			for (Integer sourceState : source.getStates()) {
@@ -208,6 +219,72 @@ public class Constraints {
 				}
 			}
 		}
+		
+		
+		/* edit-distance constraints */
+		
+		for (int i = 0; i < numStates; i++) {	// q 
+			Expr<IntSort> q = ctx.mkInt(i);
+				
+			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
+				Integer stateFrom = sourceTransition.from;
+				Character move = sourceTransition.getWitness(ba);
+				Expr<IntSort> qR = ctx.mkInt(stateFrom);
+				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+				
+				/* make variable out_len(q, a) */
+				Expr outLenExpr = out_len.apply(q, a);
+				
+				/* make variable q' = d2(q, a) */
+				Expr qPrime = d2.apply(q, a);
+				
+				/* make variable ed_dist(q, a) */
+				Expr edDistExpr = edDist.apply(q, a);
+				
+				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+				
+				/* make array of output chars */
+				Expr[] outputChars = new Expr[length];
+				
+				/* comparing a to each output char */
+				Expr disjunct = ctx.mkFalse();
+				
+				for (int l = 0; l < length; l++) {
+					Expr<IntSort> index = ctx.mkInt(l);
+					Expr d1exp = d1.apply(q, a, index);
+					outputChars[l] = d1exp;
+					Expr lt = ctx.mkLt(index, outLenExpr);
+					Expr eq = ctx.mkEq(a, d1exp);
+					disjunct = ctx.mkOr(disjunct, ctx.mkAnd(lt, eq));
+				}
+
+				/* for condition where the output chars don't include 'a' */
+				Expr negDisjunct = ctx.mkNot(disjunct);
+				
+				/* (k = 0) ==> ed_dist(q, a) = 1 */
+				Expr lenEq = ctx.mkEq(outLenExpr, zero);
+				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkInt(1));
+				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
+				Expr lenNotZero = ctx.mkNot(lenEq);
+				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkSub(outLenExpr, ctx.mkInt(1))); 	
+				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k */
+				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
+				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
+				
+				/* ed_dist constraint 1 */
+				Expr consequent = ctx.mkAnd(impl1, impl2);
+				solver.add(ctx.mkImplies(disjunct, consequent));
+					
+				/* ed_dist constraint 2 */
+				consequent = ctx.mkAnd(impl1, impl3);
+				solver.add(ctx.mkImplies(negDisjunct, consequent));
+			}
+		}
+		
 		
 		for (int i = 0; i < numStates; i++) {	// q 
 			Expr<IntSort> q = ctx.mkInt(i);
@@ -249,7 +326,14 @@ public class Constraints {
 					solver.add(ctx.mkLe(zero, d1exp));
 					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
 				}
-
+				
+				/* ed_dist(q, a) */
+				Expr edDistExpr = edDist.apply(q, a);
+				
+				/* m - (n x ed_dist(q, a)) */
+				Expr<IntSort> m = ctx.mkInt(fraction[0]);
+				Expr<IntSort> n = ctx.mkInt(fraction[1]);
+				Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
 				
 				for (Integer targetFrom : target.getStates()) {
 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
@@ -269,13 +353,22 @@ public class Constraints {
 					/* x(q_R, q, q_T) */
 					Expr xExpr = x.apply(qR, q, qT);
 		
+					/* C(q_R, q, q_T) */
+					Expr cExpr = energy.apply(qR, q, qT);
 					
-					/* expressions for implications: out_len(q, a) = 0 ==> x(qR', q', qT) */
+					/* expressions for implications: out_len(q, a) = 0 ==> 
+					 * x(qR', q', qT) /\ C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff*/
 					
 					/* special case for 0 */
 					Expr lenEq = ctx.mkEq(outLenExpr, zero);
 					Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
-					Expr c = ctx.mkImplies(lenEq, xExprPrime);
+					
+					/* C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
+					Expr cExprPrime = energy.apply(qRPrime, qPrime, qT);
+					Expr cGreaterExp = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
+					
+					Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExp));
+					
 					
 					/* loop for the rest */
 					Expr consequent = c;
@@ -283,7 +376,11 @@ public class Constraints {
 						int outputLength = l + 1;
 						lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputLength));
 						xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
-						c = ctx.mkImplies(lenEq, xExprPrime);
+						
+						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
+						cGreaterExp = ctx.mkGe(cExpr, ctx.mkSub(cExprPrime, diff));
+						
+						c = ctx.mkImplies(lenEq, ctx.mkAnd(xExprPrime, cGreaterExp));
 						consequent = ctx.mkAnd(consequent, c);
 					}
 					
@@ -292,6 +389,7 @@ public class Constraints {
 				}
 			}
 		}
+		
 		
 		
 		/* Integer Pair datatype */
@@ -459,107 +557,6 @@ public class Constraints {
 		}
 		
 		
-		/* cost constraints */
-		
-		/* declare C: Q -> Z */
-		Sort[] argsToC = new Sort[]{ I };
-		FuncDecl energy = ctx.mkFuncDecl("C", argsToC, I);
-		
-		/* C(0) = 0 */
-		solver.add(ctx.mkEq(energy.apply(zero), zero));
-		
-		/* declare edit-dist: Q x \Sigma -> Z */
-		Sort[] argsToEd = new Sort[]{ I, I };
-		FuncDecl<Sort> edDist = ctx.mkFuncDecl("ed_dist", argsToEd, I);
-		
-		for (int i = 0; i < numStates; i++) {	// q 
-			Expr<IntSort> q = ctx.mkInt(i);
-				
-			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
-				Integer stateFrom = sourceTransition.from;
-				Character move = sourceTransition.getWitness(ba);
-				Expr<IntSort> qR = ctx.mkInt(stateFrom);
-				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
-				
-				/* make variable out_len(q, a) */
-				Expr outLenExpr = out_len.apply(q, a);
-				
-				/* make variable q' = d2(q, a) */
-				Expr qPrime = d2.apply(q, a);
-				
-				/* make variable ed_dist(q, a) */
-				Expr edDistExpr = edDist.apply(q, a);
-				
-				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
-				
-				/* make array of output chars */
-				Expr[] outputChars = new Expr[length];
-				
-				/* comparing a to each output char */
-				Expr disjunct = ctx.mkFalse();
-				
-				for (int l = 0; l < length; l++) {
-					Expr<IntSort> index = ctx.mkInt(l);
-					Expr d1exp = d1.apply(q, a, index);
-					outputChars[l] = d1exp;
-					Expr lt = ctx.mkLt(index, outLenExpr);
-					Expr eq = ctx.mkEq(a, d1exp);
-					disjunct = ctx.mkOr(disjunct, ctx.mkAnd(lt, eq));
-				}
-
-				/* for condition where the output chars don't include 'a' */
-				Expr negDisjunct = ctx.mkNot(disjunct);
-				
-				/* (k = 0) ==> ed_dist(q, a) = 1 */
-				Expr lenEq = ctx.mkEq(outLenExpr, zero);
-				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkInt(1));
-				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
-				
-				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
-				Expr lenNotZero = ctx.mkNot(lenEq);
-				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkSub(outLenExpr, ctx.mkInt(1))); 	
-				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
-				
-				/* \neg (k = 0) ==> ed_dist(q, a) = k */
-				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
-				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
-				
-				/* ed_dist constraint 1 */
-				Expr consequent = ctx.mkAnd(impl1, impl2);
-				solver.add(ctx.mkImplies(disjunct, consequent));
-					
-				/* ed_dist constraint 2 */
-				consequent = ctx.mkAnd(impl1, impl3);
-				solver.add(ctx.mkImplies(negDisjunct, consequent));
-				
-				/* energy: C(q) >= C(d2(q, a)) - (m - (n x ed_dist(q, a))) */
-				Expr cQ = energy.apply(q);
-				Expr cQPrime = energy.apply(qPrime);
-				Expr<IntSort> m = ctx.mkInt(fraction[0]);
-				Expr<IntSort> n = ctx.mkInt(fraction[1]);
-				Expr diff = ctx.mkSub(m, ctx.mkMul(n, edDistExpr));
-				Expr c = ctx.mkGe(cQ, ctx.mkSub(cQPrime, diff));
-				solver.add(c); 
-				
-				/* x(q_R, q, q_T) /\ f_R(q_R) /\ f_T(q_T) ==> C(q) >= 0 */
-				for (Integer targetFrom : target.getStates()) {
- 					Expr<IntSort> qT = ctx.mkInt(targetFrom);
-
- 					/* x(q_R, q, q_T) */
- 					Expr xExpr = x.apply(qR, q, qT);
- 					
- 					Expr fexp1 = f_R.apply(qR);
- 					Expr fexp2 = f_T.apply(qT);
- 					
- 					/* we already have that x(q_R, q, q_T) /\ f_R(q_R) ==>  f_T(q_T), 
- 					 * so maybe that conjunct can be removed? */
- 					Expr antecedent = ctx.mkAnd(xExpr, fexp1, fexp2);
- 					consequent = ctx.mkGe(energy.apply(q), zero);
- 					solver.add(ctx.mkImplies(antecedent, consequent));
-				}
-			}
-		}
-		
 		
 		/* Debugging: enforce desired constraints */
 		Expr intTwo = ctx.mkInt(2);
@@ -590,9 +587,6 @@ public class Constraints {
 				/* d1 and d2 */	
 				for (int q1 = 0; q1 < numStates; q1++) {
 					Expr state = ctx.mkInt(q1);
-					/* energy at q1: C(q1) */
-					int cQ = ((IntNum) m.evaluate(energy.apply(state), false)).getInt();
-					System.out.println("C(" + q1 + ")" + " = " + cQ);
 					
 					for (int move : alphabetMap.values())  { 
 						Character input = revAlphabetMap.get(move);
@@ -626,7 +620,7 @@ public class Constraints {
 					}
 				}
 					
-				/* for which is x(q_R, q, q_T) set to TRUE? */
+				/* values for which x(q_R, q, q_T) is set to TRUE and corresponding values of C(q_R, q, q_T) */
 				for (int i = 0; i < numStates; i++) {
 					for (Integer sourceState : source.getStates()) {
 						for (Integer targetState : target.getStates()) {
@@ -635,9 +629,14 @@ public class Constraints {
 							Expr<IntSort> targetInt = ctx.mkInt(targetState);
 								
 							Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
+							Expr exp2 = energy.apply(sourceInt, stateInt, targetInt);
 							if (m.evaluate(exp1, false).isTrue()) {
 								System.out.println("x(" + sourceState + ", " + stateInt + ", " + targetState + ")");
+								int energyVal = ((IntNum) m.evaluate(exp2, false)).getInt();
+								System.out.println("C(" + sourceState + ", " + stateInt + ", " + targetState + ")" + " = " + energyVal);
 							}
+							
+							
 						}
 					}
 				}
