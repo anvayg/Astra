@@ -85,24 +85,24 @@ public class SFAOperations {
 		return positions;
 	}
 	
-	// Assume aut1 and aut2 have transitions labeled with single characters
-	public static HashSet<Character> alphabetSet(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2,
-			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+	// Assume aut has transitions labeled with single characters
+	public static HashSet<Character> alphabetSet(SFA<CharPred, Character> aut, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		HashSet<Character> alphabet = new HashSet<Character>();
-		Collection<SFAMove<CharPred, Character>> transitions1 = aut1.getTransitions();
-		Collection<SFAMove<CharPred, Character>> transitions2 = aut2.getTransitions();
+		Collection<SFAMove<CharPred, Character>> transitions1 = aut.getTransitions();
 		
 		for (SFAMove<CharPred, Character> transition : transitions1) {
 			Character label = transition.getWitness(ba);
 			alphabet.add(label);
 		}
 		
-		for (SFAMove<CharPred, Character> transition : transitions2) {
-			Character label = transition.getWitness(ba);
-			alphabet.add(label);
-		}	
-		
 		// alphabet.add(Character.MIN_VALUE); // use for empty, removing for now!
+		return alphabet;
+	}
+	
+	public static HashSet<Character> alphabetSetMult(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		HashSet<Character> alphabet = alphabetSet(aut1, ba);
+		alphabet.addAll(alphabetSet(aut2, ba));
+		
 		return alphabet;
 	}
 	

@@ -4,6 +4,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -136,7 +137,11 @@ public class ConstraintsTest {
 	// see if a --> ab works
 	static void constraintsTest(Context ctx) throws TimeoutException {
 		// Make object
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, mySFA03, ba);
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(mySFA01, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(mySFA03, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		int numStates = 2;
 		
@@ -154,7 +159,11 @@ public class ConstraintsTest {
 	
 	static void constraintsTest2(Context ctx) throws TimeoutException {
 		// Make object
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA04, ba);
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(mySFA03, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(mySFA04, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		int numStates = 1;
 				
@@ -170,26 +179,13 @@ public class ConstraintsTest {
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
-	static void constraintsTest3(Context ctx) throws TimeoutException {
-		// Make object
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA05, ba);
-		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
-		int numStates = 3;
-				
-		// Make FAs total
-		SFA<CharPred, Character> mySFA03Total = SFAOperations.mkTotalFinite(mySFA03, alphabetSet, ba);
-		SFA<CharPred, Character> mySFA05Total = SFAOperations.mkTotalFinite(mySFA05, alphabetSet, ba);
-		
-		Constraints c = new Constraints(ctx, mySFA03Total, mySFA05Total, alphabetMap, ba);
-		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		int[] fraction = new int[] {1, 1};
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 3, fraction, empty, false);
-		System.out.println(mySFT.toDotString(ba));
-	}
-	
 	/* language to language test from infinite set to infinite set */
 	static void constraintsTest4(Context ctx) throws TimeoutException {
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA05, mySFA06, ba);
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(mySFA05, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(mySFA06, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		int numStates = 3;
 		
@@ -206,7 +202,11 @@ public class ConstraintsTest {
 	/* function that takes two DFAs (without examples) and finds the synthesized transducer */
 	static void customConstraintsTest(Context ctx, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, boolean debug) throws TimeoutException {
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(source, target, ba);
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		
 		// Make FAs total
@@ -222,7 +222,12 @@ public class ConstraintsTest {
 	static SFT<CharPred, CharFunc, Character> customConstraintsWithExamplesTest(Context ctx, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
 			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException {
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(source, target, ba);
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
+		
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		System.out.println(alphabetMap);
 		
@@ -258,7 +263,7 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>("b;", ";"));
         examples.add(new Pair<String, String>("a;", "a;")); 
         examples.add(new Pair<String, String>(";", ";"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, true);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, false);
         System.out.println(synthSFT.toDotString(ba));
         
         // String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
