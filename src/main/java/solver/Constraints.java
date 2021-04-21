@@ -123,6 +123,36 @@ public class Constraints {
 		Sort[] argsToD2 = new Sort[]{ I, I };
 		FuncDecl<Sort> d2 = ctx.mkFuncDecl("d2", argsToD2, I);
 		
+		/* restrict range of d_1, d_2 and out_len */
+		for (int i = 0; i < numStates; i++) {	// q 
+			Expr<IntSort> q = ctx.mkInt(i);
+			
+			for (int move : alphabetMap.values())  {
+				Expr a = ctx.mkInt(move); 
+				
+				/* 0 <= out_len(q, a) <= l */
+				Expr outLenExpr = out_len.apply(q, a);
+				solver.add(ctx.mkLe(zero, outLenExpr));
+				solver.add(ctx.mkLe(outLenExpr, bound));
+				
+				/* make variable q' = d2(q, a) */
+				Expr qPrime = d2.apply(q, a);
+				
+				/* 0 <= qPrime < numStates; range only needs to be encoded once */
+				solver.add(ctx.mkLe(zero, qPrime));
+				solver.add(ctx.mkLt(qPrime, numStatesInt));
+				
+				for (int l = 0; l < length; l++) {
+					Expr<IntSort> index = ctx.mkInt(l);
+					Expr d1exp = d1.apply(q, a, index);
+					
+					/* 0 <= d1(q, a, index) < alphabetSize */
+					solver.add(ctx.mkLe(zero, d1exp));
+					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
+				}
+			}
+		}
+		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
 		Sort[] argsToX = new Sort[]{ I, I, I };
 		FuncDecl<Sort> x = ctx.mkFuncDecl("x", argsToX, B);
@@ -274,10 +304,8 @@ public class Constraints {
 				Expr<IntSort> qR = ctx.mkInt(stateFrom);
 				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
 				
-				/* 0 <= out_len(q, a) <= l; range only needs to be encoded once */
+				/* out_len(q, a) */
 				Expr outLenExpr = out_len.apply(q, a);
-				solver.add(ctx.mkLe(zero, outLenExpr));
-				solver.add(ctx.mkLe(outLenExpr, bound));
 					
 				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
 				Expr qRPrime = dR.apply(qR, a);
@@ -285,10 +313,6 @@ public class Constraints {
 				
 				/* make variable q' = d2(q, a) */
 				Expr qPrime = d2.apply(q, a);
-				
-				/* 0 <= qPrime < numStates; range only needs to be encoded once */
-				solver.add(ctx.mkLe(zero, qPrime));
-				solver.add(ctx.mkLt(qPrime, numStatesInt));
 							
 				
 				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
@@ -299,11 +323,7 @@ public class Constraints {
 				for (int l = 0; l < length; l++) {
 					Expr<IntSort> index = ctx.mkInt(l);
 					Expr d1exp = d1.apply(q, a, index);
-					outputChars[l] = d1exp;
-					
-					/* 0 <= d1(q, a, index) < alphabetSize */
-					solver.add(ctx.mkLe(zero, d1exp));
-					solver.add(ctx.mkLt(d1exp, alphabetSize)); 
+					outputChars[l] = d1exp; 
 				}
 				
 				/* ed_dist(q, a) */
