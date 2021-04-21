@@ -156,7 +156,7 @@ public class ConstraintsTest {
 		// Make object
 		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA04, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
-		int numStates = 3;
+		int numStates = 1;
 				
 		// Make FAs total
 		SFA<CharPred, Character> mySFA03Total = SFAOperations.mkTotalFinite(mySFA03, alphabetSet, ba);
@@ -230,7 +230,8 @@ public class ConstraintsTest {
 		SFA<CharPred, Character> sourceTotal =  SFAOperations.mkTotalFinite(source, alphabetSet, ba);
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
 		
-		Constraints c = new Constraints(ctx, sourceTotal, targetTotal, alphabetMap, ba);
+		// Changed: not making source DFA total
+		Constraints c = new Constraints(ctx, source, targetTotal, alphabetMap, ba);
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, debug);
 		return mySFT;
 	}
@@ -257,7 +258,7 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>("b;", ";"));
         examples.add(new Pair<String, String>("a;", "a;")); 
         examples.add(new Pair<String, String>(";", ";"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 2, 2, fraction, examples, true);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, true);
         System.out.println(synthSFT.toDotString(ba));
         
         // String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);

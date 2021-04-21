@@ -585,7 +585,8 @@ public class Constraints {
 		Expr intOne = ctx.mkInt(1);
 //		solver.add(ctx.mkEq(d1.apply(zero, zero, zero), intOne));
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
-//		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) intOne));
+//		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) zero));
+//		solver.add(ctx.mkEq(energy.apply(intOne, zero, zero), ctx.mkInt(-1)));
 		
 //		System.out.println(solver.toString());
 		
