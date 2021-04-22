@@ -118,7 +118,7 @@ public class ConstraintsFOTest {
 	static void constraintsTest(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, mySFA02, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA01, mySFA02, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		SFA<CharPred, Character> mySFA02Total = SFAOperations.mkTotalFinite(mySFA02, alphabetSet, ba);
 		int numStates = 2;
@@ -133,7 +133,7 @@ public class ConstraintsFOTest {
 	static void constraintsTest2(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA04, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA03, mySFA04, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		SFA<CharPred, Character> mySFA04Total = SFAOperations.mkTotalFinite(mySFA04, alphabetSet, ba);
 		int numStates = 3;
@@ -148,7 +148,7 @@ public class ConstraintsFOTest {
 	static void constraintsExampleTest(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, mySFA02, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA01, mySFA02, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		SFA<CharPred, Character> mySFA02Total = SFAOperations.mkTotalFinite(mySFA02, alphabetSet, ba);
 		int numStates = 2;
@@ -164,7 +164,7 @@ public class ConstraintsFOTest {
 	static void constraintsExampleTest2(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA03, mySFA04, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA03, mySFA04, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		SFA<CharPred, Character> mySFA04Total = SFAOperations.mkTotalFinite(mySFA04, alphabetSet, ba);
 		int numStates = 3;
@@ -181,7 +181,7 @@ public class ConstraintsFOTest {
 	static void constraintsExampleTest3(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA04, mySFA06, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA04, mySFA06, ba);
 		// System.out.println(alphabetSet);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		// System.out.println(alphabetMap);
@@ -199,7 +199,7 @@ public class ConstraintsFOTest {
 	static void constraintsExampleTest4(Context ctx) throws TimeoutException {
 		Solver solver = ctx.mkSolver();
 		
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA04, mySFA05, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA04, mySFA05, ba);
 		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
 		SFA<CharPred, Character> mySFA05Total = SFAOperations.mkTotalFinite(mySFA05, alphabetSet, ba);
 		int numStates = 3;
@@ -213,7 +213,7 @@ public class ConstraintsFOTest {
 	}
 	
 	static void exampleTransitionsTest() throws TimeoutException {
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, mySFA05, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSetMult(mySFA01, mySFA05, ba);
 		SFA<CharPred, Character> mySFA05Total = SFAOperations.mkTotalFinite(mySFA05, alphabetSet, ba);
 		
 		Pair<String, String> example = new Pair<String, String>("a", "ac");
@@ -222,7 +222,7 @@ public class ConstraintsFOTest {
 		// System.out.println(transitions);
 		
 		
-		alphabetSet = SFAOperations.alphabetSet(mySFA04, mySFA06, ba);
+		alphabetSet = SFAOperations.alphabetSetMult(mySFA04, mySFA06, ba);
 		SFA<CharPred, Character> mySFA06Total = SFAOperations.mkTotalFinite(mySFA06, alphabetSet, ba);
 		example = new Pair<String, String>("ab", "abab");
 		transitions = ConstraintsFixedOutputs.bestOutputsExamples(mySFA04, mySFA06Total, example, ba);

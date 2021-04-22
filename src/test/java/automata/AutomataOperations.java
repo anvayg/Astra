@@ -85,7 +85,8 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	}
 	
 	public static void mkTotalFiniteTest() throws TimeoutException {
-		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, mySFA02, ba);
+		Set<Character> alphabetSet = SFAOperations.alphabetSet(mySFA01, ba);
+		alphabetSet.addAll(SFAOperations.alphabetSet(mySFA02, ba));
 		SFA<CharPred, Character> mySFA01Total = SFAOperations.mkTotalFinite(mySFA01, alphabetSet, ba);
 		
 		Integer nextState = SFAOperations.getSuccessorState(mySFA01Total, 0, 'b', ba);
@@ -124,9 +125,6 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
 				 SFA.MkFiniteSFA(mySFA01, mySFA02, ba);
 		System.out.println(triple.second.toDotString(ba));
-		
-		HashSet<Character> alphabet = SFAOperations.alphabetSet(mySFA01, mySFA02, ba);
-		System.out.println(alphabet.toString());
 	}
 	
 }
