@@ -39,6 +39,10 @@ public class ConstraintsTest {
 	private static SFA<CharPred, Character> mySFA08;
 	private static SFA<CharPred, Character> mySFA09;
 	private static SFA<CharPred, Character> mySFA10;
+	private static SFA<CharPred, Character> mySFA11;
+	private static SFA<CharPred, Character> mySFA12;
+	private static SFA<CharPred, Character> mySFA13;
+	private static SFA<CharPred, Character> mySFA14;
 	
 	public static void mkSFAs() throws TimeoutException {
 		// SFA0.1: SFA that reads a
@@ -132,6 +136,51 @@ public class ConstraintsTest {
 		List<Integer> finStates10 = new LinkedList<Integer>();
 		finStates10.add(0);
 		mySFA10 = SFA.MkSFA(transitions10, 0, finStates10, ba, false, false);
+		
+		// SFA1.1: SFA that reads (a*<s(c|t)a)*
+		List<SFAMove<CharPred, Character>> transitions11 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions11.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('a')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('<')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('s')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('c')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('t')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('>')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(4, 0, new CharPred('a')));
+		List<Integer> finStates11 = new LinkedList<Integer>();
+		finStates11.add(0);
+		mySFA11 = SFA.MkSFA(transitions11, 0, finStates11, ba, false, false);
+		
+		// SFA1.2: SFA that reads a*
+		List<SFAMove<CharPred, Character>> transitions12 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('a')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('<')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('s')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('c')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('t')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('>')));
+		List<Integer> finStates12 = new LinkedList<Integer>();
+		finStates12.add(0);
+		mySFA12 = SFA.MkSFA(transitions12, 0, finStates12, ba, false, false);
+		
+		// SFA1.3: a^4(a|b) (big input language)
+		List<SFAMove<CharPred, Character>> transitions13 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions13.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
+		transitions13.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('a')));
+		transitions13.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('a')));
+		transitions13.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('a')));
+		transitions13.add(new SFAInputMove<CharPred, Character>(4, 5, new CharPred('a')));
+		transitions13.add(new SFAInputMove<CharPred, Character>(4, 5, new CharPred('b')));
+		List<Integer> finStates13 = new LinkedList<Integer>();
+		finStates13.add(5);
+		mySFA13 = SFA.MkSFA(transitions13, 0, finStates13, ba, false, false);
+		
+		// SFA1.4: 
+		List<SFAMove<CharPred, Character>> transitions14 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions14.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('a')));
+		transitions14.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('b')));
+		List<Integer> finStates14 = new LinkedList<Integer>();
+		finStates14.add(0);
+		mySFA14 = SFA.MkSFA(transitions14, 0, finStates14, ba, false, false);
 	}
 	
 	// see if a --> ab works
@@ -238,15 +287,18 @@ public class ConstraintsTest {
 		// Changed: not making source DFA total
 		Constraints c = new Constraints(ctx, source, targetTotal, alphabetMap, ba);
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, debug);
+		
+		for (Pair<String, String> example : ioExamples) {
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+            assertTrue(exampleOutput.equals(example.second));
+        }
+		
 		return mySFT;
 	}
 	
 	static void constraintsTest5(Context ctx) throws TimeoutException {
-        // a(a|b); -> ab;
         int[] fraction = new int[] {1, 1};
-        // customConstraintsTest(ctx, mySFA07, mySFA08, 3, 3, fraction, false); 	// translates aa; --> ab;
         
-        // try to add example
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
@@ -266,13 +318,40 @@ public class ConstraintsTest {
         SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 1, 2, fraction, examples, false);
         System.out.println(synthSFT.toDotString(ba));
         
-        // String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
-        // assertTrue(exampleOutput1.equals("a;"));
+        String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
+        assertTrue(exampleOutput1.equals(";"));
         
-        // String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
-        // assertTrue(exampleOutput2.equals("a;"));
+        String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
+        assertTrue(exampleOutput2.equals("a;"));
 	}
 	
+	static void constraintsTest7(Context ctx) throws TimeoutException {
+        int[] fraction = new int[] {1, 1};
+        
+        List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>("a<sc>a", "aa"));
+        examples.add(new Pair<String, String>("a<st>a", "a<st>a"));
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, 2, 2, fraction, examples, false);
+        System.out.println(synthSFT.toDotString(ba));
+	}
+	
+	static void constraintsTest8(Context ctx) throws TimeoutException {
+        int[] fraction = new int[] {2, 1};
+        
+        List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>("aaaab", ""));
+        examples.add(new Pair<String, String>("aaaaa", "aaaaa"));
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA13, mySFA14, 5, 5, fraction, examples, false);
+        System.out.println(synthSFT.toDotString(ba));
+	}
+	
+	static void constraintsTest9(Context ctx) throws TimeoutException {
+        int[] fraction = new int[] {2, 1};
+        
+        List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA03, mySFA13, 2, 3, fraction, examples, false);
+        System.out.println(synthSFT.toDotString(ba));
+	}
 	
 	public static void main(String[] args) throws TimeoutException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
@@ -286,7 +365,10 @@ public class ConstraintsTest {
         // constraintsTest3(ctx);
         // constraintsTest4(ctx);
         // constraintsTest5(ctx);
-        constraintsTest6(ctx);
+        // constraintsTest6(ctx);
+        // constraintsTest7(ctx);
+        // constraintsTest8(ctx);
+        constraintsTest9(ctx);
 	}
 	
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -433,8 +434,6 @@ public class Constraints {
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
-			System.out.println(Arrays.toString(inputArr));
-			System.out.println(Arrays.toString(outputArr));
 			
 			/* declare function e_k: k x input_position -> (output_position, Q) */
 			Sort[] args = new Sort[] {I};
@@ -614,7 +613,7 @@ public class Constraints {
 		
 		HashMap<Integer, Character> revAlphabetMap = reverseMap(alphabetMap);
 		
-		List<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+		Set<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new HashSet<SFTMove<CharPred, CharFunc, Character>>();
 		
 		if (solver.check() == Status.SATISFIABLE) {
 			long startTime = System.nanoTime();
@@ -717,11 +716,11 @@ public class Constraints {
 					/* get state to */
 					Expr d2exp = d2.apply(state, a);
 					int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
-					
+								
 					/* output_len */
 					Expr outputLenExpr = out_len.apply(state, a);
 					int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
-					
+								
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
@@ -731,14 +730,14 @@ public class Constraints {
 						Character output = revAlphabetMap.get(outMove);
 						outputFunc.add(new CharConstant(output));
 					}
-					
-					transitionsFT.add(new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc));
+								
+					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
+					transitionsFT.add(newTrans);
 				}
 			}
 					
 		}
 		
-
 		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();
 		SFT<CharPred, CharFunc, Character> mySFT = SFT.MkSFT(transitionsFT, 0, finStates, ba);
 		
