@@ -615,8 +615,8 @@ public class Constraints {
 		
 		Set<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new HashSet<SFTMove<CharPred, CharFunc, Character>>();
 		
+		long startTime = System.nanoTime();
 		if (solver.check() == Status.SATISFIABLE) {
-			long startTime = System.nanoTime();
 			Model m = solver.getModel();
 			long stopTime = System.nanoTime();
 			System.out.println((stopTime - startTime));
@@ -736,6 +736,10 @@ public class Constraints {
 				}
 			}
 					
+		} else {
+			long stopTime = System.nanoTime();
+			System.out.println((stopTime - startTime));
+			System.out.println((stopTime - startTime) / 1000000000);
 		}
 		
 		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();

@@ -143,9 +143,10 @@ public class ConstraintsTest {
 		transitions11.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('<')));
 		transitions11.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('s')));
 		transitions11.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('c')));
-		transitions11.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('t')));
-		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('>')));
-		transitions11.add(new SFAInputMove<CharPred, Character>(4, 0, new CharPred('a')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('r')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('t')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(4, 5, new CharPred('>')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(5, 0, new CharPred('a')));
 		List<Integer> finStates11 = new LinkedList<Integer>();
 		finStates11.add(0);
 		mySFA11 = SFA.MkSFA(transitions11, 0, finStates11, ba, false, false);
@@ -156,6 +157,7 @@ public class ConstraintsTest {
 		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('<')));
 		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('s')));
 		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('c')));
+		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('r')));
 		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('t')));
 		transitions12.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('>')));
 		List<Integer> finStates12 = new LinkedList<Integer>();
@@ -329,9 +331,9 @@ public class ConstraintsTest {
         int[] fraction = new int[] {1, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        examples.add(new Pair<String, String>("a<sc>a", "aa"));
-        examples.add(new Pair<String, String>("a<st>a", "a<st>a"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, 2, 2, fraction, examples, false);
+        examples.add(new Pair<String, String>("a<scr>a", "aa"));
+        examples.add(new Pair<String, String>("a<sct>a", "a<sct>a"));
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, 5, 3, fraction, examples, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -366,9 +368,9 @@ public class ConstraintsTest {
         // constraintsTest4(ctx);
         // constraintsTest5(ctx);
         // constraintsTest6(ctx);
-        // constraintsTest7(ctx);
+        constraintsTest7(ctx);
         // constraintsTest8(ctx);
-        constraintsTest9(ctx);
+        // constraintsTest9(ctx);
 	}
 	
 }
