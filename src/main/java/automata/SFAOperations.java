@@ -13,7 +13,9 @@ import org.sat4j.specs.TimeoutException;
 
 import automata.sfa.*;
 import theory.BooleanAlgebra;
+import theory.characters.CharFunc;
 import theory.characters.CharPred;
+import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.Triple;
 
@@ -157,11 +159,55 @@ public class SFAOperations {
 		return false;
 	}
 	
-	
 	/* Calls mintermReduction, implemented in symbolicautomata */
 	public static Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> 
 	mkFinite(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
+	
+	
+	/* Transform aut such that there is <= 1 transition between any 2 states */
+	public static SFA<CharPred, Character> pseudoNormalize(SFA<CharPred, Character> aut, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Collection<Integer> states = aut.getStates();
+		Set<SFAMove<CharPred, Character>> newTransitions = new HashSet<SFAMove<CharPred, Character>>();
+		Set<Integer> finalStates = new HashSet<Integer>();
+		finalStates.addAll(aut.getFinalStates());
+		int nextState = aut.getMaxStateId() + 1;
+		
+		for (Integer state : states) {
+			Set<Integer> visited = new HashSet<Integer>();
+			
+			for (SFAInputMove<CharPred, Character> transition : aut.getInputMovesFrom(state)) {
+				Integer successor = transition.to;
+				if (!visited.contains(successor)) {
+					visited.add(successor);
+					newTransitions.add(transition);
+				} else {
+					// already seen this state, need to redirect transition to new state
+					newTransitions.add(new SFAInputMove<CharPred, Character>(state, nextState, transition.guard));
+					
+					// add transitions from new state to the successors of successor
+					for (SFAInputMove<CharPred, Character> succTransition : aut.getInputMovesFrom(successor)) {
+						if (succTransition.to == successor) {
+							newTransitions.add(new SFAInputMove<CharPred, Character>(nextState, succTransition.to, succTransition.guard));
+						} else {
+							newTransitions.add(new SFAInputMove<CharPred, Character>(nextState, succTransition.to, succTransition.guard));
+						}
+					}
+					
+					// if successor is final, then new state should also be
+					if (aut.isFinalState(successor)) finalStates.add(nextState);
+					
+					// increment nextState
+					nextState++;
+				}
+			}
+			
+		}
+		
+		return SFA.MkSFA(newTransitions, aut.getInitialState(), finalStates, ba, false, false);
+	}
+	
+	
 	
 }
