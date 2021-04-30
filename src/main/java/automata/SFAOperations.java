@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.sat4j.specs.TimeoutException;
@@ -13,6 +14,8 @@ import org.sat4j.specs.TimeoutException;
 import automata.sfa.*;
 import theory.BooleanAlgebra;
 import theory.characters.CharPred;
+import utilities.Pair;
+import utilities.Triple;
 
 /**
  * Class for functions/operations on SFA over characters
@@ -152,6 +155,13 @@ public class SFAOperations {
 		if (aut.isFinalState(state)) return true;
 		
 		return false;
+	}
+	
+	
+	/* Calls mintermReduction, implemented in symbolicautomata */
+	public static Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> 
+	mkFinite(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
 	
 }

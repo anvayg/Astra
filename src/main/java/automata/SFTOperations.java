@@ -1,6 +1,9 @@
 package automata;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import org.sat4j.specs.TimeoutException;
 
@@ -8,8 +11,10 @@ import theory.BooleanAlgebra;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
+import theory.characters.CharOffset;
 import theory.characters.CharPred;
 import transducers.sft.*;
+import utilities.Pair;
 
 public class SFTOperations {
 	
@@ -42,4 +47,41 @@ public class SFTOperations {
 		
 		return outputStr.toString();
 	}
+	
+	/* Performs minterm expansion */
+	public static SFT<CharPred, CharFunc, Character> mintermExpansion(SFT<CharPred, CharFunc, Character> trans,
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+		Collection<SFTMove<CharPred, CharFunc, Character>> newTransitions = new ArrayList<SFTMove<CharPred, CharFunc, Character>>();
+		
+		for (Integer state : trans.getStates()) {
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : trans.getInputMovesFrom(state)) {
+				SFTInputMove<CharPred, CharFunc, Character> newTransition = (SFTInputMove<CharPred, CharFunc, Character>) transition.clone();
+				CharPred pred = idToMinterm.get(newTransition.guard).first;
+				
+				/* set new guard */
+				newTransition.guard = pred;
+				
+				/* build new outputFunc */
+				Character c = transition.getWitness(ba);
+				
+				List<CharFunc> output = new ArrayList<CharFunc>();
+				for (CharFunc f: transition.outputFunctions) { 		
+					if (f != null && f instanceof CharConstant) { 	// all the CharFuncs should be constants
+							Character out = ((CharConstant)f).c;
+							if (c.equals(out)) {
+								output.add(CharOffset.IDENTITY); // identity if input/output minterms are the same
+							} else {
+								output.add(f);
+							}
+					}
+				}
+				newTransition.outputFunctions = output;
+				
+				newTransitions.add(newTransition);
+			}
+		}
+		
+		return SFT.MkSFT(newTransitions, trans.getInitialState(), trans.getFinalStatesAndTails(), ba);
+	}
+	
 }
