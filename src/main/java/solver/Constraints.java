@@ -84,23 +84,29 @@ public class Constraints {
 		return arr;
 	}
 	
-	/* static method for mkConstraints without examples */
+	/* static method for mkConstraints without examples and template */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
 			int[] fraction, boolean debug) throws TimeoutException {
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, empty, ba, debug);
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, empty, null, ba, debug);
+	}
+	
+	/* static method for mkConstraints without template */
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
+			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, null, ba, debug);
 	}
 	
 	/* static method for mkConstraints */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, ba, debug);
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, debug);
 	}
 		
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
-			List<Pair<String, String>> ioExamples, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
 			boolean debug) throws TimeoutException {
 		
 		/* int and bool sorts */
@@ -597,6 +603,22 @@ public class Constraints {
 			exampleCount++;
 		}
 		
+		/* use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
+		if (template != null) {
+			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
+				Integer stateFrom = transition.from;
+				Character move = transition.getWitness(ba);
+				Integer stateTo = transition.to;
+				
+				Expr<IntSort> q = ctx.mkInt(stateFrom);
+				Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+				Expr qPrime = ctx.mkInt(stateTo);
+				
+				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
+			}
+		}
+		
+		
 		
 		
 		/* Debugging: enforce desired constraints */
@@ -608,6 +630,10 @@ public class Constraints {
 //		solver.add(ctx.mkEq(energy.apply(intOne, zero, zero), ctx.mkInt(-1)));
 		
 //		System.out.println(solver.toString());
+		
+		
+		
+		
 		
 		/* Reconstruct transducer */
 		

@@ -33,6 +33,8 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	private static SFA<CharPred, Character> mySFA02;
 	private static SFA<CharPred, Character> mySFA03;
 	private static SFA<CharPred, Character> mySFA04;
+	private static SFA<CharPred, Character> mySFA09;
+	private static SFA<CharPred, Character> mySFA11;
 	
 	private static SFT<CharPred, CharFunc, Character> mySFT01;
 	
@@ -61,6 +63,29 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		finStates04.add(2);
 		mySFA04 = SFA.MkSFA(transitions04, 0, finStates04, ba);
 		
+		// SFA0.9: SFA that reads (;| (a|b);)*
+		List<SFAMove<CharPred, Character>> transitions09 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions09.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred(';')));
+		transitions09.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('a')));
+		transitions09.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('b')));
+		transitions09.add(new SFAInputMove<CharPred, Character>(1, 0, new CharPred(';')));
+		List<Integer> finStates09 = new LinkedList<Integer>();
+		finStates09.add(0);
+		mySFA09 = SFA.MkSFA(transitions09, 0, finStates09, ba, false, false);
+		
+		// SFA1.1: SFA that reads (a*<s(c|t)a)*
+		List<SFAMove<CharPred, Character>> transitions11 = new LinkedList<SFAMove<CharPred, Character>>();
+		transitions11.add(new SFAInputMove<CharPred, Character>(0, 0, new CharPred('a')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(0, 1, new CharPred('<')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(1, 2, new CharPred('s')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(2, 3, new CharPred('c')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('r')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(3, 4, new CharPred('t')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(4, 5, new CharPred('>')));
+		transitions11.add(new SFAInputMove<CharPred, Character>(5, 0, new CharPred('a')));
+		List<Integer> finStates11 = new LinkedList<Integer>();
+		finStates11.add(0);
+		mySFA11 = SFA.MkSFA(transitions11, 0, finStates11, ba, false, false);
 	}
 	
 	public static void mkSFTs() throws TimeoutException {
@@ -113,6 +138,11 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		assertTrue(outputStr.equals("bb"));
 	}
 	
+	public static void transformTest() throws TimeoutException {
+		SFA<CharPred, Character> newSFA = SFAOperations.pseudoNormalize(mySFA11, ba);
+		System.out.println(newSFA.toDotString(ba));
+	}
+	
 	public static void main(String[] args) throws TimeoutException {
 		mkSFAs();
 		mkSFTs();
@@ -121,6 +151,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		mkTotalFiniteTest();
 		getPositionTest();
 		getOutputTest();
+		transformTest();
 		
 		Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
 				 SFA.MkFiniteSFA(mySFA01, mySFA02, ba);
