@@ -624,13 +624,16 @@ public class Constraints {
 		/* Debugging: enforce desired constraints */
 		Expr intTwo = ctx.mkInt(2);
 		Expr intOne = ctx.mkInt(1);
+		Expr intFive = ctx.mkInt(5);
+		Expr intThree = ctx.mkInt(3);
+		Expr intFour = ctx.mkInt(4);
 //		solver.add(ctx.mkEq(d1.apply(zero, zero, zero), intOne));
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(energy.apply(intOne, zero, zero), ctx.mkInt(-1)));
+				
 		
-//		System.out.println(solver.toString());
-		
+//		System.out.println(solver.toString());		
 		
 		
 		
@@ -733,32 +736,63 @@ public class Constraints {
 		    }
 			
 			/* Add transitions to FT */
-			for (int q1 = 0; q1 < numStates; q1++) {
-				for (int move : alphabetMap.values())  { 
-					Character input = revAlphabetMap.get(move);
-					Expr state = ctx.mkInt(q1);
-					Expr a = ctx.mkInt(move); 
+			if (template != null) {
+				/* Only add 'relevant' transitions */
+				for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
+					Integer stateFrom = transition.from;
+					Character move = transition.getWitness(ba);
+					Integer stateTo = transition.to;
 					
-					/* get state to */
-					Expr d2exp = d2.apply(state, a);
-					int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
-								
+					Expr<IntSort> q1 = ctx.mkInt(stateFrom);
+					Expr<IntSort> a = ctx.mkInt(alphabetMap.get(move));
+					Expr q2 = ctx.mkInt(stateTo);
+					
 					/* output_len */
-					Expr outputLenExpr = out_len.apply(state, a);
+					Expr outputLenExpr = out_len.apply(q1, a);
 					int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
 								
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
 						Expr<IntSort> index = ctx.mkInt(i);
-						Expr d1exp = d1.apply(state, a, index);
+						Expr d1exp = d1.apply(q1, a, index);
 						int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
 						Character output = revAlphabetMap.get(outMove);
 						outputFunc.add(new CharConstant(output));
 					}
 								
-					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
+					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(stateFrom, stateTo, new CharPred(move), outputFunc);
 					transitionsFT.add(newTrans);
+				}
+				
+			} else {
+				for (int q1 = 0; q1 < numStates; q1++) {
+					for (int move : alphabetMap.values())  { 
+						Character input = revAlphabetMap.get(move);
+						Expr state = ctx.mkInt(q1);
+						Expr a = ctx.mkInt(move); 
+						
+						/* get state to */
+						Expr d2exp = d2.apply(state, a);
+						int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+									
+						/* output_len */
+						Expr outputLenExpr = out_len.apply(state, a);
+						int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+									
+						/* get output */
+						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+						for (int i = 0; i < outputLen; i++) {
+							Expr<IntSort> index = ctx.mkInt(i);
+							Expr d1exp = d1.apply(state, a, index);
+							int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+							Character output = revAlphabetMap.get(outMove);
+							outputFunc.add(new CharConstant(output));
+						}
+									
+						SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
+						transitionsFT.add(newTrans);
+					}
 				}
 			}
 					

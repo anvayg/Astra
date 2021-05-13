@@ -335,8 +335,9 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>("a<sct>a", "a<sct>a"));
         
         SFA<CharPred, Character> template = SFAOperations.pseudoNormalize(mySFA11, ba);
+        System.out.println(template.toDotString(ba));
         
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, 7, 4, fraction, examples, template, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, template.stateCount(), 4, fraction, examples, template, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	

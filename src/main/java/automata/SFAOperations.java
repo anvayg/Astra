@@ -165,6 +165,25 @@ public class SFAOperations {
 		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
 	
+	/* Reduce each char of string to its corresponding minterm */
+	public static String finitizeStringMinterms(String str, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm, 
+			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		StringBuilder newString = new StringBuilder();
+		for (int i = 0; i < str.length(); i++) {
+			char currentChar = str.charAt(i);
+			
+			for (Map.Entry<CharPred, Pair<CharPred, ArrayList<Integer>>> entry : idToMinterm.entrySet()) {
+				CharPred minterm = entry.getValue().first;
+				
+				if (minterm.isSatisfiedBy(currentChar)) { 	// only 1 minterm should be satisfied, since they are disjoint
+					newString.append(ba.generateWitness(entry.getKey())); 	// should only be 1 witness too
+				}
+			}
+		}
+		
+		return newString.toString();
+	}
+	
 	
 	/* Transform aut such that there is <= 1 transition between any 2 states */
 	public static SFA<CharPred, Character> pseudoNormalize(SFA<CharPred, Character> aut, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
