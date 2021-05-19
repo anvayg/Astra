@@ -208,7 +208,7 @@ public class ConstraintsTest {
 			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
 		} else if (encoding.equals("bitvec")) {
 			ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
-			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, debug);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
 		} else {
 			throw new IllegalArgumentException("Invalid encoding string");
 		}
@@ -293,7 +293,7 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
         examples.add(new Pair<String, String>("b;", "b;"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, null, "int", null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, null, "bitvec", "test5.smt2", false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -325,7 +325,7 @@ public class ConstraintsTest {
         SFA<CharPred, Character> template = SFAOperations.pseudoNormalize(mySFA11, ba);
         System.out.println(template.toDotString(ba));
         
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA11, mySFA12, 4, 4, fraction, examples, null, "bitvec", "test7.smt2", false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA11, mySFA12, 4, 4, fraction, examples, null, "int", "test7.smt2", false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	

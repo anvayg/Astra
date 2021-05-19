@@ -1,5 +1,9 @@
 package solver;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -85,8 +89,8 @@ public class ConstraintsBV {
 	
 	/* Method for mkConstraints */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, debug);
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, smtFile, debug);
 	}
 	
 	
@@ -94,7 +98,7 @@ public class ConstraintsBV {
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
 			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
-			boolean debug) throws TimeoutException {
+			String smtFile, boolean debug) throws TimeoutException {
 		/* bit-vec and bool sorts */
 		BitVecSort BV = ctx.mkBitVecSort(8);
 		Sort B = ctx.getBoolSort();
@@ -587,7 +591,17 @@ public class ConstraintsBV {
 			exampleCount++;
 		}
 		
-		
+		/* Print SMT string to smtFile */
+		try {
+			if (smtFile != null) {
+				BufferedWriter br = new BufferedWriter(new FileWriter(new File(smtFile)));
+				br.write(solver.toString());
+				br.write("(check-sat)");
+				br.close();
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		
 		
 		/* Reconstruct transducer */

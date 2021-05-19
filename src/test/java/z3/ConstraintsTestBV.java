@@ -85,7 +85,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	
 	static SFT<CharPred, CharFunc, Character> customConstraintsTest(Context ctx, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException {
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException {
 		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
 		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
 		Set<Character> alphabetSet = new HashSet<Character>();
@@ -101,7 +101,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		
 		// Changed: not making source DFA total
 		ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, debug);
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
 		
 		for (Pair<String, String> example : ioExamples) {
         	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
@@ -115,7 +115,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         int[] fraction = new int[] {1, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA01, mySFA03, 1, 2, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA01, mySFA03, 1, 2, fraction, examples, null, null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -126,7 +126,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
         examples.add(new Pair<String, String>("b;", "b;"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 2, 2, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 2, 2, fraction, examples, null, null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	

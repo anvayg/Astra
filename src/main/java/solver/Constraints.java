@@ -640,10 +640,11 @@ public class Constraints {
 		
 		/* Print SMT string to smtFile */
 		try {
-			if (smtFile != null) { 
+			if (smtFile != null) {
 				BufferedWriter br = new BufferedWriter(new FileWriter(new File(smtFile)));
 				br.write(solver.toString());
 				br.write("(check-sat)");
+				br.close();
 			}
 		} catch (IOException e1) {
 			e1.printStackTrace();
