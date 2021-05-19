@@ -19,6 +19,7 @@ import automata.sfa.SFA;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
 import solver.Constraints;
+import solver.ConstraintsBV;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
@@ -185,6 +186,41 @@ public class ConstraintsTest {
 		mySFA14 = SFA.MkSFA(transitions14, 0, finStates14, ba, false, false);
 	}
 	
+	static SFT<CharPred, CharFunc, Character> customConstraintsTest(Context ctx, SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, 
+			String encoding, String smtFile, boolean debug) throws TimeoutException {
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
+		
+		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
+		System.out.println(alphabetMap);
+		
+		// Make FAs total: Changed, not making source DFA total
+		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
+		
+		SFT<CharPred, CharFunc, Character> mySFT = null;
+		if (encoding.equals("int")) {
+			Constraints c = new Constraints(ctx, source, targetTotal, alphabetMap, ba);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
+		} else if (encoding.equals("bitvec")) {
+			ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, debug);
+		} else {
+			throw new IllegalArgumentException("Invalid encoding string");
+		}
+		
+		for (Pair<String, String> example : ioExamples) {
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+            assertTrue(exampleOutput.equals(example.second));
+        }
+		
+		return mySFT;
+	}
+	
 	// see if a --> ab works
 	static void constraintsTest(Context ctx) throws TimeoutException {
 		// Make object
@@ -204,7 +240,7 @@ public class ConstraintsTest {
 		Constraints c = new Constraints(ctx, mySFA01Total, mySFA03Total, alphabetMap, ba);
 		int[] fraction = new int[] {1, 1};
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, fraction, empty, false);
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, 2, fraction, empty, true);
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
@@ -250,54 +286,6 @@ public class ConstraintsTest {
 		System.out.println(mySFT.toDotString(ba));
 	}
 	
-	/* function that takes two DFAs (without examples) and finds the synthesized transducer */
-	static void customConstraintsTest(Context ctx, SFA<CharPred, Character> source, 
-			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, boolean debug) throws TimeoutException {
-		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
-		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
-		Set<Character> alphabetSet = new HashSet<Character>();
-		alphabetSet.addAll(sourceAlphabetSet);
-		alphabetSet.addAll(targetAlphabetSet);
-		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
-		
-		// Make FAs total
-		SFA<CharPred, Character> sourceTotal =  SFAOperations.mkTotalFinite(source, alphabetSet, ba);
-		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
-		
-		Constraints c = new Constraints(ctx, sourceTotal, targetTotal, alphabetMap, ba);
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, debug);
-		System.out.println(mySFT.toDotString(ba));
-	}
-	
-	/* testing function with examples as well */
-	static SFT<CharPred, CharFunc, Character> customConstraintsWithExamplesTest(Context ctx, SFA<CharPred, Character> source, 
-			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException {
-		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
-		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
-		Set<Character> alphabetSet = new HashSet<Character>();
-		alphabetSet.addAll(sourceAlphabetSet);
-		alphabetSet.addAll(targetAlphabetSet);
-		
-		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
-		System.out.println(alphabetMap);
-		
-		// Make FAs total
-		SFA<CharPred, Character> sourceTotal =  SFAOperations.mkTotalFinite(source, alphabetSet, ba);
-		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
-		
-		// Changed: not making source DFA total
-		Constraints c = new Constraints(ctx, source, targetTotal, alphabetMap, ba);
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, debug);
-		
-		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
-            assertTrue(exampleOutput.equals(example.second));
-        }
-		
-		return mySFT;
-	}
-	
 	static void constraintsTest5(Context ctx) throws TimeoutException {
         int[] fraction = new int[] {1, 1};
         
@@ -305,7 +293,7 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
         examples.add(new Pair<String, String>("b;", "b;"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, null, "int", null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -317,7 +305,7 @@ public class ConstraintsTest {
         examples.add(new Pair<String, String>("b;", ";"));
         examples.add(new Pair<String, String>("a;", "a;")); 
         examples.add(new Pair<String, String>(";", ";"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, null, "int", null, false);
         System.out.println(synthSFT.toDotString(ba));
         
         String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
@@ -337,7 +325,7 @@ public class ConstraintsTest {
         SFA<CharPred, Character> template = SFAOperations.pseudoNormalize(mySFA11, ba);
         System.out.println(template.toDotString(ba));
         
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA11, mySFA12, template.stateCount(), 4, fraction, examples, template, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA11, mySFA12, 4, 4, fraction, examples, null, "bitvec", "test7.smt2", false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -347,7 +335,7 @@ public class ConstraintsTest {
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("aaaab", ""));
         examples.add(new Pair<String, String>("aaaaa", "aaaaa"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA13, mySFA14, 5, 5, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA13, mySFA14, 5, 5, fraction, examples, null, "int", null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -355,7 +343,7 @@ public class ConstraintsTest {
         int[] fraction = new int[] {2, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsWithExamplesTest(ctx, mySFA03, mySFA13, 2, 3, fraction, examples, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA03, mySFA13, 2, 3, fraction, examples, null, "int", null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	

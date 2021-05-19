@@ -21,7 +21,10 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Sort;
 import com.microsoft.z3.Status;
+import com.microsoft.z3.Symbol;
+import com.microsoft.z3.TupleSort;
 
+import automata.SFAOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import theory.BooleanAlgebraSubst;
@@ -78,6 +81,12 @@ public class ConstraintsBV {
 		}
 		
 		return arr;
+	}
+	
+	/* Method for mkConstraints */
+	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, debug);
 	}
 	
 	
@@ -356,7 +365,7 @@ public class ConstraintsBV {
 					Expr consequent = c;
 					for (int l = 0; l < length; l++) {
 						int outputLength = l + 1;
-						lenEq = ctx.mkEq(outLenExpr, ctx.mkInt(outputLength));
+						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BV));
 						xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
 						
 						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
@@ -395,6 +404,190 @@ public class ConstraintsBV {
 			}
 		}
 		
+		/* BV Pair datatype */
+		TupleSort pair = ctx.mkTupleSort(ctx.mkSymbol("mkPair"), // name of tuple constructor
+				 							new Symbol[] { ctx.mkSymbol("first"), ctx.mkSymbol("second") }, // names of projection operators
+				 							new Sort[] { BV, BV } // types of projection operators
+				 						);
+		FuncDecl first = pair.getFieldDecls()[0]; // declarations are for projections
+		FuncDecl second = pair.getFieldDecls()[1];
+		
+		/* example constraints */
+		FuncDecl[] eFuncs = new FuncDecl[ioExamples.size()];
+		
+		int exampleCount = 0;
+		for (Pair<String, String> ioExample : ioExamples) {
+			/* verify example */
+			if (!SFAOperations.isAcceptedBy(ioExample.first, source, ba)) throw new IllegalArgumentException();
+			if (!SFAOperations.isAcceptedBy(ioExample.second, target, ba)) throw new IllegalArgumentException();
+			
+			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
+			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
+			
+			/* declare function e_k: k x input_position -> (output_position, Q) */
+			Sort[] args = new Sort[] {BV};
+			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, pair);
+			FuncDecl e = eFuncs[exampleCount];
+			
+			/* initial position : e_k(0) = (0, q_0) */
+			Expr initPair = pair.mkDecl().apply(zero, zero);
+			solver.add(ctx.mkEq(e.apply(zero), initPair));
+			
+			int inputLen = ioExample.first.length();
+			BitVecExpr inputLength = (BitVecNum) ctx.mkNumeral(inputLen, BV);
+			int outputLen = ioExample.second.length();
+			BitVecExpr outputLength = (BitVecNum) ctx.mkNumeral(outputLen, BV);
+			
+			/* 0 <= e_k(l1).first <= outputLen and 0 <= e_k(l1).second < numStates */
+			for (int l = 0; l <= inputLen; l++) {
+					Expr eExpr = e.apply((BitVecNum) ctx.mkNumeral(l, BV));
+					Expr eExprFirst = first.apply(eExpr);
+					Expr eExprSecond = second.apply(eExpr);
+					
+					/* restrict values of first */
+					solver.add(ctx.mkBVSLE(zero, eExprFirst));
+					solver.add(ctx.mkBVSLE(eExprFirst, outputLength));
+					
+					/* restrict values of second */
+					solver.add(ctx.mkBVSLE(zero, eExprSecond));
+					solver.add(ctx.mkBVSLT(eExprSecond, numStatesInt));
+			}
+			
+			/* final position : e_k(l1).first = l2 */
+			Expr eExprFirst = first.apply(e.apply(inputLength));
+			solver.add(ctx.mkEq(eExprFirst, outputLength));
+			
+			for (int s = 0; s < numStates; s++) {	// q 
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(s, BV);
+					
+				for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
+					Integer stateFrom = sourceTransition.from;
+					Character move = sourceTransition.getWitness(ba);
+					BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					
+					/* out_len(q, a) */
+					Expr outLenExpr = out_len.apply(q, a);
+						
+					/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
+					Expr qRPrime = dR.apply(qR, a);
+					
+					
+					/* make variable q' = d2(q, a) */
+					Expr qPrime = d2.apply(q, a);
+								
+					
+					/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+					
+					/* make array of output chars */
+					Expr[] outputChars = new Expr[length];
+					
+					for (int l = 0; l < length; l++) {
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+						Expr d1exp = d1.apply(q, a, index);
+						outputChars[l] = d1exp;
+					}
+					
+					/* ed_dist(q, a) */
+					Expr edDistExpr = edDist.apply(q, a);
+					
+					/* m - (n x ed_dist(q, a)) */
+					BitVecExpr m = (BitVecNum) ctx.mkNumeral(fraction[0], BV);
+					BitVecExpr n = (BitVecNum) ctx.mkNumeral(fraction[1], BV);
+					Expr diff = ctx.mkBVSub(m, ctx.mkBVMul(n, edDistExpr));
+					
+					for (Integer targetFrom : target.getStates()) {
+						BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
+						
+						/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
+						
+						/* make array of destination states in target */
+						Expr[] dstStates = new Expr[length];
+						
+						dstStates[0] = dT.apply(qT, outputChars[0]);
+						for (int l = 1; l < length; l++) { 		// start from 1 in the loop
+							dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l]);
+						}
+						
+						/* x(q_R, q, q_T) */
+						Expr xExpr = x.apply(qR, q, qT);
+						
+						/* C(q_R, q, q_T) */
+						Expr cExpr = energy.apply(qR, q, qT);
+						
+						for (int i = 0; i < inputLen; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
+							for (int j = 0; j <= outputLen; j++) {	// but output is already completely generated
+								BitVecExpr inputPosition = (BitVecNum) ctx.mkNumeral(i, BV);
+								BitVecExpr outputPosition = (BitVecNum) ctx.mkNumeral(j, BV);
+								
+								/* input[i+1] = a */
+								BitVecExpr nextInputPosition = (BitVecNum) ctx.mkNumeral(inputArr[i], BV);
+								Expr inputEq = ctx.mkEq(nextInputPosition, a);
+								
+								/* output needs be <= outputLen - j */
+								int possibleOutputLen = Math.min(outputLen - j, length);
+								BitVecExpr possibleOutputLength = (BitVecNum) ctx.mkNumeral(possibleOutputLen, BV);
+								
+								Expr outputLe = ctx.mkBVSLE(outLenExpr, possibleOutputLength);
+								
+								/* e_k(i) = (j, q) */
+								Expr eExpr = ctx.mkEq(e.apply(inputPosition), pair.mkDecl().apply(outputPosition, q));
+								
+								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1) = (j, q') 
+								 * /\ x(qR', q', qT) /\ C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
+								
+								/* special case for 0 */
+								Expr lenEq = ctx.mkEq(outLenExpr, zero);
+								Expr eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BV)), pair.mkDecl().apply(outputPosition, qPrime));
+								Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
+								
+								/* C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
+								Expr cExprPrime = energy.apply(qRPrime, qPrime, qT);
+								Expr cGreaterExpr = ctx.mkBVSGE(cExpr, ctx.mkBVSub(cExprPrime, diff));
+								
+								Expr c = ctx.mkImplies(lenEq, ctx.mkAnd(eExprPrime, xExprPrime, cGreaterExpr));
+								
+								/* loop for the rest */
+								Expr consequent = ctx.mkAnd(outputLe, c);
+								for (int l = 0; l < possibleOutputLen; l++) { 
+									int outputGenLength = l + 1;
+									lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputGenLength, BV));
+									eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BV)), 
+											pair.mkDecl().apply((BitVecNum) ctx.mkNumeral(j + outputGenLength, BV), qPrime));
+									xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
+									
+									cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
+									cGreaterExpr = ctx.mkBVSGE(cExpr, ctx.mkBVSub(cExprPrime, diff));
+									
+									/* equalities */
+									Expr stringEqualities = ctx.mkTrue();
+									for (int inc = 1; inc <= outputGenLength; inc++) {
+										int index = (j + inc) - 1;
+										BitVecExpr nextPosition = (BitVecNum) ctx.mkNumeral(outputArr[index], BV);
+										Expr eq = ctx.mkEq(nextPosition, outputChars[inc - 1]);
+										stringEqualities = ctx.mkAnd(stringEqualities, eq);
+									}
+									
+									c = ctx.mkImplies(lenEq, ctx.mkAnd(stringEqualities, eExprPrime, xExprPrime, cGreaterExpr)); 
+									consequent = ctx.mkAnd(consequent, c);
+								}
+								
+								
+								/* make big constraint */
+								Expr antecedent = ctx.mkAnd(eExpr, xExpr, inputEq);
+								solver.add(ctx.mkImplies(antecedent, consequent));
+							}
+						}
+						
+					}
+					
+				}
+			}
+			
+			exampleCount++;
+		}
+		
+		
 		
 		
 		/* Reconstruct transducer */
@@ -422,18 +615,18 @@ public class ConstraintsBV {
 						
 						/* get state to */
 						Expr d2exp = d2.apply(state, a);
-						int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+						int q2 = ((BitVecNum) m.evaluate(d2exp, false)).getInt();
 						
 						/* output_len */
 						Expr outputLenExpr = out_len.apply(state, a);
-						int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+						int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
 						
 						/* get output */
 						StringBuilder outputStr = new StringBuilder("");
 						for (int i = 0; i < outputLen; i++) {
-							Expr<IntSort> index = ctx.mkInt(i);
+							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
 							Expr d1exp = d1.apply(state, a, index);
-							int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+							int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
 							Character output = revAlphabetMap.get(outMove);
 							outputStr.append(output);
 						}
@@ -443,7 +636,7 @@ public class ConstraintsBV {
 						
 						/* edit-distance of transitions */
 						Expr edDistExpr = edDist.apply(state, a);
-						int editDist = ((IntNum) m.evaluate(edDistExpr, false)).getInt();
+						int editDist = ((BitVecNum) m.evaluate(edDistExpr, false)).getInt();
 						System.out.println("edit-distance(" + q1 + ", " + input + ", " + outputStr + ") = " + editDist);
 					}
 				}
@@ -460,7 +653,7 @@ public class ConstraintsBV {
 							Expr exp2 = energy.apply(sourceInt, stateInt, targetInt);
 							if (m.evaluate(exp1, false).isTrue()) {
 								System.out.println("x(" + sourceState + ", " + stateInt.getInt() + ", " + targetState + ")");
-								int energyVal = ((IntNum) m.evaluate(exp2, false)).getInt();
+								int energyVal = ((BitVecNum) m.evaluate(exp2, false)).getInt();
 								System.out.println("C(" + sourceState + ", " + stateInt.getInt() + ", " + targetState + ")" + " = " + energyVal);
 							}
 							
@@ -479,18 +672,18 @@ public class ConstraintsBV {
 						
 					/* get state to */
 					Expr d2exp = d2.apply(state, a);
-					int q2 = ((IntNum) m.evaluate(d2exp, false)).getInt();
+					int q2 = ((BitVecNum) m.evaluate(d2exp, false)).getInt();
 									
 					/* output_len */
 					Expr outputLenExpr = out_len.apply(state, a);
-					int outputLen = ((IntNum) m.evaluate(outputLenExpr, false)).getInt();
+					int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
 									
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
-						Expr<IntSort> index = ctx.mkInt(i);
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
 						Expr d1exp = d1.apply(state, a, index);
-						int outMove = ((IntNum) m.evaluate(d1exp, false)).getInt();
+						int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
 						Character output = revAlphabetMap.get(outMove);
 						outputFunc.add(new CharConstant(output));
 					}

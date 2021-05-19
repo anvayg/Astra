@@ -1,5 +1,9 @@
 package solver;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -84,30 +88,30 @@ public class Constraints {
 		return arr;
 	}
 	
-	/* static method for mkConstraints without examples and template */
+	/* Method for mkConstraints without examples and template */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, 
 			int[] fraction, boolean debug) throws TimeoutException {
 		List<Pair<String, String>> empty = new ArrayList<Pair<String, String>>();
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, empty, null, ba, debug);
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, empty, null, ba, null, debug);
 	}
 	
-	/* static method for mkConstraints without template */
+	/* Method for mkConstraints without template */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
 			List<Pair<String, String>> ioExamples, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, null, ba, debug);
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, null, ba, null, debug);
 	}
 	
-	/* static method for mkConstraints */
+	/* Method for mkConstraints */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, debug);
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, smtFile, debug);
 	}
 		
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
 			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
-			boolean debug) throws TimeoutException {
+			String smtFile, boolean debug) throws TimeoutException {
 		
 		/* int and bool sorts */
 		Sort I = ctx.getIntSort();
@@ -627,15 +631,23 @@ public class Constraints {
 		Expr intFive = ctx.mkInt(5);
 		Expr intThree = ctx.mkInt(3);
 		Expr intFour = ctx.mkInt(4);
+		Expr intSix = ctx.mkInt(6);
 //		solver.add(ctx.mkEq(d1.apply(zero, zero, zero), intOne));
 //		solver.add(ctx.mkEq(d2.apply(zero, zero), (Expr) zero));
 //		solver.add(ctx.mkEq(out_len.apply(zero, zero), (Expr) zero));
-//		solver.add(ctx.mkEq(energy.apply(intOne, zero, zero), ctx.mkInt(-1)));
-				
-		
-//		System.out.println(solver.toString());		
+//		solver.add(ctx.mkEq(energy.apply(intOne, zero, zero), ctx.mkInt(-1)));		
 		
 		
+		/* Print SMT string to smtFile */
+		try {
+			if (smtFile != null) { 
+				BufferedWriter br = new BufferedWriter(new FileWriter(new File(smtFile)));
+				br.write(solver.toString());
+				br.write("(check-sat)");
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		
 		
 		/* Reconstruct transducer */
