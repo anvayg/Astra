@@ -591,6 +591,97 @@ public class ConstraintsBV {
 			exampleCount++;
 		}
 		
+		/* use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
+		if (template != null) {
+			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
+				Integer stateFrom = transition.from;
+				Character move = transition.getWitness(ba);
+				Integer stateTo = transition.to;
+				
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				
+				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
+			}
+		}
+		
+		// add constraints to reduce output space
+		Expr intOne = (BitVecNum) ctx.mkNumeral(1, BV);
+		Expr intTwo = (BitVecNum) ctx.mkNumeral(2, BV);
+		Expr intThree = (BitVecNum) ctx.mkNumeral(3, BV);
+		Expr intFour = (BitVecNum) ctx.mkNumeral(4, BV);
+		Expr intFive = (BitVecNum) ctx.mkNumeral(5, BV);
+		Expr intSix = (BitVecNum) ctx.mkNumeral(6, BV);
+		
+//		Expr aChar = (BitVecNum) ctx.mkNumeral(alphabetMap.get('a'), BV);
+//		Expr lt = (BitVecNum) ctx.mkNumeral(alphabetMap.get('<'), BV);
+//		Expr s = (BitVecNum) ctx.mkNumeral(alphabetMap.get('s'), BV);
+//		Expr c = (BitVecNum) ctx.mkNumeral(alphabetMap.get('c'), BV);
+//		Expr r = (BitVecNum) ctx.mkNumeral(alphabetMap.get('r'), BV);
+//		Expr t = (BitVecNum) ctx.mkNumeral(alphabetMap.get('t'), BV);
+//		Expr gt = (BitVecNum) ctx.mkNumeral(alphabetMap.get('>'), BV);
+//		
+//		// out_len(0, a) = 1
+//		solver.add(ctx.mkEq(out_len.apply(zero, aChar), intOne)); 
+//		
+//		// d1(0, a, 0) = a
+//		solver.add(ctx.mkEq(d1.apply(zero, aChar, zero), aChar));
+//		
+//		
+//		// out_len(0, <) = 0
+//		solver.add(ctx.mkEq(out_len.apply(zero, lt), (Expr) zero));
+//		
+//		// d1(0, <, 0) = a
+//		solver.add(ctx.mkEq(d1.apply(zero, lt, zero), aChar));
+//		
+//		
+//		// out_len(1, s) = 0
+//		solver.add(ctx.mkEq(out_len.apply(intOne, s), (Expr) zero));
+//		
+//		// d1(1, s, 0) = a
+//		solver.add(ctx.mkEq(d1.apply(intOne, s, zero), aChar));
+//		
+//		
+//		// out_len(2, c) = 0
+//		solver.add(ctx.mkEq(out_len.apply(intTwo, c), (Expr) zero));
+//				
+//		// d1(2, c, 0) = a
+//		solver.add(ctx.mkEq(d1.apply(intTwo, c, zero), aChar));
+//		
+//		
+//		// out_len(3, r) = 0
+//		solver.add(ctx.mkEq(out_len.apply(intThree, r), (Expr) zero));
+//		
+//		
+//		// out_len(4, >) = 0
+//		solver.add(ctx.mkEq(out_len.apply(intFour, gt), (Expr) zero));
+//		
+//		// out_len(3, t) = 4
+//		solver.add(ctx.mkEq(out_len.apply(intThree, t), intFour)); 	// added for experiment
+//		
+//		// d1(3, t, 0) = <
+//		solver.add(ctx.mkEq(d1.apply(intThree, t, zero), lt));
+//		// d1(3, t, 1) = s
+//		solver.add(ctx.mkEq(d1.apply(intThree, t, intOne), s));
+//		// d1(3, t, 2) = c
+//		solver.add(ctx.mkEq(d1.apply(intThree, t, intTwo), c));
+//		// d1(3, t, 3) = t
+//		solver.add(ctx.mkEq(d1.apply(intThree, t, intThree), t));
+//		
+//		// out_len(6, >) = 1
+//		solver.add(ctx.mkEq(out_len.apply(intSix, gt), intOne));
+//		
+//		// d1(6, >, 0) = >
+//		solver.add(ctx.mkEq(d1.apply(intSix, gt, zero), gt));
+//		
+//		
+//		// out_len(5, a) = 1
+//		solver.add(ctx.mkEq(out_len.apply(intFive, aChar), intOne));
+//						
+//		// d1(5, a, 0) = a
+//		solver.add(ctx.mkEq(d1.apply(intFive, aChar, zero), aChar));
+		
 		/* Print SMT string to smtFile */
 		try {
 			if (smtFile != null) {
@@ -671,39 +762,70 @@ public class ConstraintsBV {
 								System.out.println("C(" + sourceState + ", " + stateInt.getInt() + ", " + targetState + ")" + " = " + energyVal);
 							}
 							
-							
 						}
 					}
 				}
+				
+				/* values of e(i) */
 		    }
 			
 			/* Add transitions to FT */
-			for (int q1 = 0; q1 < numStates; q1++) {
-				for (int move : alphabetMap.values())  { 
-					Character input = revAlphabetMap.get(move);
-					BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BV);
-					BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV); 
-						
-					/* get state to */
-					Expr d2exp = d2.apply(state, a);
-					int q2 = ((BitVecNum) m.evaluate(d2exp, false)).getInt();
-									
+			if (template != null) {
+				/* Only add 'relevant' transitions */
+				for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
+					Integer stateFrom = transition.from;
+					Character move = transition.getWitness(ba);
+					Integer stateTo = transition.to;
+					
+					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					
 					/* output_len */
-					Expr outputLenExpr = out_len.apply(state, a);
+					Expr outputLenExpr = out_len.apply(q1, a);
 					int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
-									
+								
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
 						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
-						Expr d1exp = d1.apply(state, a, index);
+						Expr d1exp = d1.apply(q1, a, index);
 						int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
 						Character output = revAlphabetMap.get(outMove);
 						outputFunc.add(new CharConstant(output));
 					}
-									
-					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
+								
+					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(stateFrom, stateTo, new CharPred(move), outputFunc);
 					transitionsFT.add(newTrans);
+				}
+				
+			} else {
+				for (int q1 = 0; q1 < numStates; q1++) {
+					for (int move : alphabetMap.values())  { 
+						Character input = revAlphabetMap.get(move);
+						BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BV);
+						BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV); 
+							
+						/* get state to */
+						Expr d2exp = d2.apply(state, a);
+						int q2 = ((BitVecNum) m.evaluate(d2exp, false)).getInt();
+										
+						/* output_len */
+						Expr outputLenExpr = out_len.apply(state, a);
+						int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
+										
+						/* get output */
+						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+						for (int i = 0; i < outputLen; i++) {
+							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+							Expr d1exp = d1.apply(state, a, index);
+							int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
+							Character output = revAlphabetMap.get(outMove);
+							outputFunc.add(new CharConstant(output));
+						}
+										
+						SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
+						transitionsFT.add(newTrans);
+					}
 				}
 			}
 					

@@ -1,4 +1,4 @@
-package z3;
+package solver;
 
 
 import static org.junit.Assert.assertTrue;

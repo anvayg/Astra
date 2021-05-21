@@ -35,8 +35,8 @@ public class SFTOperations {
 			for (SFTInputMove<CharPred, CharFunc, Character> transition : transitions) {
 				if (transition.guard.isSatisfiedBy(next)) { 	// only 1 transition should be sat
 					for (CharFunc f: transition.outputFunctions) {
-						if (f != null && f instanceof CharConstant) {
-							Character out = ((CharConstant)f).c;
+						if (f != null) {
+							Character out = ba.MkSubstFuncConst(f, next);
 							outputStr.append(out);
 						}
 					}

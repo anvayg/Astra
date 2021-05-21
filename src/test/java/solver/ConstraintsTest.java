@@ -1,4 +1,4 @@
-package z3;
+package solver;
 
 import static org.junit.Assert.assertTrue;
 
@@ -316,16 +316,17 @@ public class ConstraintsTest {
 	}
 	
 	static void constraintsTest7(Context ctx) throws TimeoutException {
-        int[] fraction = new int[] {1, 1};
+        int[] fraction = new int[] {2, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("a<scr>a", "aa"));
         examples.add(new Pair<String, String>("a<sct>a", "a<sct>a"));
         
-        SFA<CharPred, Character> template = SFAOperations.pseudoNormalize(mySFA11, ba);
+        // SFA<CharPred, Character> template = SFAOperations.pseudoNormalize(mySFA11, ba);
+        SFA<CharPred, Character> template = mySFA11;
         System.out.println(template.toDotString(ba));
         
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA11, mySFA12, 4, 4, fraction, examples, null, "int", "test7.smt2", false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA11, mySFA12, template.stateCount(), 5, fraction, examples, template, "bitvec", "test7.smt2", false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
@@ -335,7 +336,7 @@ public class ConstraintsTest {
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("aaaab", ""));
         examples.add(new Pair<String, String>("aaaaa", "aaaaa"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA13, mySFA14, 5, 5, fraction, examples, null, "int", null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA13, mySFA14, 5, 5, fraction, examples, null, "bitvec", null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
