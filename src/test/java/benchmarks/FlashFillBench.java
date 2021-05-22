@@ -25,7 +25,7 @@ public class FlashFillBench {
 	 * */
 	
 	/* extr-acronym */
-	@Test
+	
 	public void extrAcronym() throws TimeoutException {
 		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*";
 		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba); 
@@ -39,17 +39,37 @@ public class FlashFillBench {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("Principles Of Programming Languages", "POPL"));
+        examples.add(new Pair<String, String>("Programming Language Design Implementation", "PLDI")); 	// requires 2 examples
+        																								// 'and' omitted from PLDI
         
-        ConstraintsTestSymbolic.customConstraintsTest(CONFERENCE_NAME, CONFERENCE_ACRONYM, CONFERENCE_NAME.stateCount(), 1, fraction, examples, null, false);
+        ConstraintsTestSymbolic.customConstraintsTest(CONFERENCE_NAME, CONFERENCE_ACRONYM, CONFERENCE_NAME.stateCount(), 1, fraction, examples, CONFERENCE_NAME, false);
+        
+        ConstraintsTestSymbolic.customConstraintsTest(CONFERENCE_NAME, CONFERENCE_ACRONYM, 1, 1, fraction, examples, null, false);
 	}
 	
 	/* extr_fname-err */
-	
+	public void extrFnameErr() throws TimeoutException {
+		
+	}
 	
 	/* extr_fname */
-	
+	@Test
+	public void extrFname() throws TimeoutException {
+		String NONEMPTY_DIRECTORY_REGEX = "(([a-zA-Z.\\-\\_][a-zA-Z.\\-\\_]*)/)*([a-zA-Z.\\-\\_][a-zA-Z.\\-\\_]*)";
+		SFA<CharPred, Character> NONEMPTY_DIRECTORY = (new SFAprovider(NONEMPTY_DIRECTORY_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		System.out.println(NONEMPTY_DIRECTORY.toDotString(ba));
+		
+		String LOCALFOLDER_REGEX = "[a-zA-Z.\\\\-\\\\_][a-zA-Z.\\\\-\\\\_]*";
+		SFA<CharPred, Character> LOCALFOLDER = (new SFAprovider(LOCALFOLDER_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		
+		
+	}
 	
 	/* extr_num */
+	@Test
+	public void extrNum() throws TimeoutException {
+		
+	}
 	
 	
 	/* extr_odds */
