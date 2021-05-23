@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 
 import theory.BooleanAlgebra;
@@ -71,12 +72,28 @@ public class SFTOperations {
 							if (c.equals(out)) {
 								output.add(CharOffset.IDENTITY); // identity if input/output minterms are the same
 							} else {
-								output.add(f);
+								CharPred inputMinterm = SFAOperations.findSatisfyingMinterm(c, idToMinterm);
+								CharPred outputMinterm = SFAOperations.findSatisfyingMinterm(out, idToMinterm);
+								
+								if (inputMinterm.intervals.size() == 1 && outputMinterm.intervals.size() == 1) {
+									ImmutablePair<Character, Character> inputInterval = inputMinterm.intervals.get(0);
+									ImmutablePair<Character, Character> outputInterval = outputMinterm.intervals.get(0);
+									
+									int inputIntervalSize = inputInterval.right - inputInterval.left;
+									int outputIntervalSize = outputInterval.right - outputInterval.left;
+									
+									if (inputIntervalSize == outputIntervalSize) {
+										int offset = outputInterval.left - inputInterval.left;
+										output.add(new CharOffset(offset));
+									}
+								} else {
+									output.add(f);
+								}
 							}
 					}
 				}
-				newTransition.outputFunctions = output;
 				
+				newTransition.outputFunctions = output;
 				newTransitions.add(newTransition);
 			}
 		}

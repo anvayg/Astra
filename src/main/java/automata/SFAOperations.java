@@ -165,6 +165,18 @@ public class SFAOperations {
 		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
 	
+	public static CharPred findSatisfyingMinterm(Character c, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm) throws TimeoutException {
+		for (Map.Entry<CharPred, Pair<CharPred, ArrayList<Integer>>> entry : idToMinterm.entrySet()) {
+			CharPred minterm = entry.getValue().first;
+			
+			if (minterm.isSatisfiedBy(c)) { 	// only 1 minterm should be satisfied, since they are disjoint
+				 return minterm;
+			}
+		}
+		
+		return null;
+	}
+	
 	/* Reduce each char of string to its corresponding minterm */
 	public static String finitizeStringMinterms(String str, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm, 
 			BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
