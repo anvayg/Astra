@@ -83,7 +83,9 @@ public class FlashFillBench {
 	
 	
 	/* extr_odds */
-	
+	public void extrOdds() throws TimeoutException {
+		
+	}
 	
 	/* extr_quant */
 	
@@ -127,10 +129,64 @@ public class FlashFillBench {
 	
 	/* normalize_name_position */
 	
-	public void normalizeNamePosition() throws TimeoutException {
-		String ROW_REGEX = "";
+	public void normalizeNamePosition() throws TimeoutException {	// modified
+		String ROW_REGEX = "NAME: ([A-Z][a-z]*) TITLE: ([A-Z][a-z]*)";
+		SFA<CharPred, Character> ROW = (new SFAprovider(ROW_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(ROW.accepts(lOfS("NAME: Alex TITLE: Asst"), ba));
+		
+		String TITLED_NAME_REGEX = "([A-Z][a-z]*)[(]([A-Z][a-z]*)[)]";
+		SFA<CharPred, Character> TITLED_NAME = (new SFAprovider(TITLED_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(TITLED_NAME.accepts(lOfS("Alex(Asst)"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("NAME: Ben TITLE: Mr", "Ben(Mr)"));
+	    examples.add(new Pair<String, String>("NAME: Alex TITLE: Asst", "Alex(Asst)"));  // omitted examples, 
+	    																				// because we can't remember things
+	    
+	    ConstraintsTestSymbolic.customConstraintsTest(ROW, TITLED_NAME, 2, 2, fraction, examples, null, false);
 	}
 	
+	/* cap-prob */
+	@Test
+	public void capProb() throws TimeoutException {
+		String UPPERCASENAME_REGEX = "[A-Z][A-Z]*";
+		SFA<CharPred, Character> UPPERCASENAME = (new SFAprovider(UPPERCASENAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(UPPERCASENAME.accepts(lOfS("DOE"), ba));
+		
+		String NAME_REGEX = "[A-Z][a-z]*";
+		SFA<CharPred, Character> NAME = (new SFAprovider(NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(NAME.accepts(lOfS("Doe"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+	    examples.add(new Pair<String, String>("DOE", "Doe"));
+	    examples.add(new Pair<String, String>("ODE", "Ode"));
+	    
+	    ConstraintsTestSymbolic.customConstraintsTest(UPPERCASENAME, NAME, 2, 1, fraction, examples, null, false);
+	}
+	
+	/* remove-last */
+	
+	public void removeLast() throws TimeoutException {
+		String FIRSTLASTNAME_REGEX = "[A-Z][a-z]* [A-Z][a-z]*";
+		SFA<CharPred, Character> FIRSTLASTNAME = (new SFAprovider(FIRSTLASTNAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(FIRSTLASTNAME.accepts(lOfS("John Doe"), ba));
+		
+		String NAME_REGEX = "[A-Z][a-z]*";
+		SFA<CharPred, Character> NAME = (new SFAprovider(NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(NAME.accepts(lOfS("John"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+	    examples.add(new Pair<String, String>("John Doe", "John"));
+	    examples.add(new Pair<String, String>("Anvay Grover", "Anvay"));
+	    
+	    ConstraintsTestSymbolic.customConstraintsTest(FIRSTLASTNAME, NAME, 2, 1, fraction, examples, null, false);
+	}
 	
 	// -------------------------
 	// Auxiliary methods
