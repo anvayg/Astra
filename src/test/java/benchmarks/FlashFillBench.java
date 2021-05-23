@@ -83,8 +83,25 @@ public class FlashFillBench {
 	
 	
 	/* extr_odds */
+	
 	public void extrOdds() throws TimeoutException {
+		String UNCLEANED_DATA_REGEX = "([(][)]|[0-9][0-9]*)*(([(][0-9][0-9]*/[0-9][0-9]*[)])([(][)]|[0-9][0-9]*)*)*";
+		SFA<CharPred, Character> UNCLEANED_DATA = (new SFAprovider(UNCLEANED_DATA_REGEX, ba)).getSFA().removeEpsilonMoves(ba).determinize(ba);
+		assertTrue(UNCLEANED_DATA.accepts(lOfS("13(14/15)()21"), ba));
+		assertTrue(UNCLEANED_DATA.accepts(lOfS("13()(14/15)()21"), ba));
+		System.out.println(SFAOperations.getStateInFA(UNCLEANED_DATA, UNCLEANED_DATA.getInitialState(), "13(14/15)()21", ba));
 		
+		String CLEANEDODDS_REGEX = "([(][0-9][0-9]*/[0-9][0-9]*[)]#)*";
+		SFA<CharPred, Character> CLEANEDODDS = (new SFAprovider(CLEANEDODDS_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(CLEANEDODDS.accepts(lOfS("(14/15)#"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+	    examples.add(new Pair<String, String>("13(14/15)()21", "(14/15)#"));
+	    examples.add(new Pair<String, String>("5()(7/8)()21", "(7/8)#"));
+		
+		ConstraintsTestSymbolic.customConstraintsTest(UNCLEANED_DATA, CLEANEDODDS, 4, 2, fraction, examples, null, false);
 	}
 	
 	/* extr_quant */
@@ -149,7 +166,7 @@ public class FlashFillBench {
 	}
 	
 	/* cap-prob */
-	@Test
+	
 	public void capProb() throws TimeoutException {
 		String UPPERCASENAME_REGEX = "[A-Z][A-Z]*";
 		SFA<CharPred, Character> UPPERCASENAME = (new SFAprovider(UPPERCASENAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
