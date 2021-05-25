@@ -1,0 +1,6 @@
+[A-Z][a-z]*( [A-Z][a-z]*)*
+[A-Z][A-Z]*
+Principles Of Programming Languages
+POPL
+Programming Language Design Implementation
+PLDI

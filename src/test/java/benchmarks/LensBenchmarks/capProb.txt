@@ -1,0 +1,6 @@
+[A-Z][A-Z]*
+[A-Z][a-z]*
+DOE
+Doe
+ODE
+Ode
