@@ -161,7 +161,7 @@ public class ConstraintsTestSymbolic {
 	}
 	
 	/* testing function with examples as well */
-	static SFT<CharPred, CharFunc, Character> customConstraintsTest(SFA<CharPred, Character> source, 
+	public static SFT<CharPred, CharFunc, Character> customConstraintsTest(SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
 			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, boolean debug) throws TimeoutException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
@@ -180,10 +180,10 @@ public class ConstraintsTestSymbolic {
 		System.out.println(targetFinite.toDotString(ba));
 		
 		Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = triple.third;
-		System.out.println(idToMinterm);
 		
 		List<Pair<String, String>> examplesFinite = finitizeExamples(ioExamples, idToMinterm);
-		
+		System.out.println(examplesFinite.get(0).first);
+		System.out.println(SFAOperations.getStateInFA(sourceFinite, sourceFinite.getInitialState(), examplesFinite.get(0).first, ba));
 		
 		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(sourceFinite, ba);
 		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(targetFinite, ba);
@@ -197,13 +197,20 @@ public class ConstraintsTestSymbolic {
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(targetFinite, alphabetSet, ba);
 		
 		// template
-		template = SFAOperations.pseudoNormalize(sourceFinite, ba);
-		System.out.println(template.toDotString(ba));
-		System.out.println(template.getFinalStates());
+//		template = SFAOperations.pseudoNormalize(sourceFinite, ba);
+//		System.out.println(template.toDotString(ba));
+//		System.out.println(template.getFinalStates());
 		
-		ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, sourceFinite, null, debug);
-		System.out.println(mySFT.toDotString(ba));
+		SFT<CharPred, CharFunc, Character> mySFT = null;
+		if (template != null) { 	// using a default template right now, fix later
+			ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, sourceFinite, null, debug);
+			System.out.println(mySFT.toDotString(ba));
+		} else {
+			ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, null, debug);
+			System.out.println(mySFT.toDotString(ba));
+		}
 		
 		// Call minterm expansion
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third, ba);
@@ -214,6 +221,7 @@ public class ConstraintsTestSymbolic {
             assertTrue(exampleOutput.equals(example.second));
         }
 		
+		System.out.println("Done");
 		return mySFTexpanded;
 	}
 	

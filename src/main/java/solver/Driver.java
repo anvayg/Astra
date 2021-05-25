@@ -92,7 +92,7 @@ public class Driver {
 					return null;
 				}
 			} else {
-				return mySFT;
+				return SFTOperations.mintermExpansion(mySFT, triple.third, ba);
 			}
 		}
 	}

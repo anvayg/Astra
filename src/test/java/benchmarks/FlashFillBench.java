@@ -98,14 +98,15 @@ public class FlashFillBench {
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+	    examples.add(new Pair<String, String>("13(14/150)()21", "(14/150)#"));
 	    examples.add(new Pair<String, String>("13(14/15)()21", "(14/15)#"));
 	    examples.add(new Pair<String, String>("5()(7/8)()21", "(7/8)#"));
 		
-		ConstraintsTestSymbolic.customConstraintsTest(UNCLEANED_DATA, CLEANEDODDS, 4, 2, fraction, examples, null, false);
+		ConstraintsTestSymbolic.customConstraintsTest(UNCLEANED_DATA, CLEANEDODDS, 3, 2, fraction, examples, null, false);
 	}
 	
 	/* extr_quant */
-	
+	@Test
 	public void extrQuant() throws TimeoutException {
 		String THINGANDAMOUNT_REGEX = "[a-zA-Z\\s]*[0-9][a-zA-Z\\s0-9]*";
 		SFA<CharPred, Character> THINGANDAMOUNT = (new SFAprovider(THINGANDAMOUNT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
