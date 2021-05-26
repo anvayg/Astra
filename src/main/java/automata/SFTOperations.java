@@ -85,6 +85,8 @@ public class SFTOperations {
 									if (inputIntervalSize == outputIntervalSize) {
 										int offset = outputInterval.left - inputInterval.left;
 										output.add(new CharOffset(offset));
+									} else {
+										output.add(f);
 									}
 								} else {
 									output.add(f);
