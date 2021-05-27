@@ -25,6 +25,7 @@ public class FlashFillBench {
 	 * */
 	
 	/* extr-acronym */
+	
 	public void extrAcronym() throws TimeoutException {
 		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*";
 		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba); 
@@ -63,6 +64,7 @@ public class FlashFillBench {
 	}
 	
 	/* extr_num */
+	
 	public void extrNum() throws TimeoutException {
 		String PHONENUMBERHIDDEN_REGEX = "[a-zA-Z\\s]*[0-9][0-9][0-9]-[0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][a-zA-Z\\s]*";
 		SFA<CharPred, Character> PHONENUMBERHIDDEN = (new SFAprovider(PHONENUMBERHIDDEN_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
@@ -83,7 +85,7 @@ public class FlashFillBench {
 	
 	
 	/* extr_odds */
-	@Test
+	
 	public void extrOdds() throws TimeoutException {
 		String UNCLEANED_DATA_REGEX = "([(][)]|[0-9][0-9]*)*(([(][0-9][0-9]*/[0-9][0-9]*[)])([(][)]|[0-9][0-9]*)*)*";
 		SFA<CharPred, Character> UNCLEANED_DATA = (new SFAprovider(UNCLEANED_DATA_REGEX, ba)).getSFA().removeEpsilonMoves(ba).determinize(ba);
@@ -226,7 +228,7 @@ public class FlashFillBench {
 	}
 	
 	/* bibtex-to-readable-title */
-	
+	@Test
 	public void bibtexToReadableTitle() throws TimeoutException {
 		String BIBTEX_TITLE_REGEX = "title=[{]([A-Z][a-z]*)(\\s[A-Z][a-z]*)*[}]";
 		SFA<CharPred, Character> BIBTEX_TITLE = (new SFAprovider(BIBTEX_TITLE_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
@@ -241,18 +243,19 @@ public class FlashFillBench {
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("title={Boomerang}", "ti - Boomerang"));
 		
-		ConstraintsTestSymbolic.customConstraintsTest(BIBTEX_TITLE, READABLE_TITLE, 7, 1, fraction, examples, null, false);
+		ConstraintsTestSymbolic.customConstraintsTest(BIBTEX_TITLE, READABLE_TITLE, 10, 1, fraction, examples, null, false);
 	}
 	
 	/* Bommerang_composers: source_to_views */
 	
 	public void sourceToViews() throws TimeoutException {
-		String SOURCE_REGEX = "([A-Za-z ]+[,] [0-9]{4}[-][0-9]{4}[,] [A-Za-z ]+)";
+		String SOURCE_REGEX = "([A-Za-z\\s]+[,] [0-9]{4}[-][0-9]{4}[,] [A-Za-z\\s]+)";
 		SFA<CharPred, Character> SOURCE = (new SFAprovider(SOURCE_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		assertTrue(SOURCE.accepts(lOfS("Jean Sibelius, 1865- 1957, Finnish"), ba));
 		System.out.println(SFAOperations.getStateInFA(SOURCE, SOURCE.getInitialState(), "Jean Sibelius, 1865-1957, Finnish", ba));
+		System.out.println(SOURCE.getFinalStates());
+		assertTrue(SOURCE.accepts(lOfS("Jean Sibelius, 1865-1957, Finnish"), ba));
 		
-		String VIEW_REGEX = "([A-Za-z ]+[,] [A-Za-z ]+)";
+		String VIEW_REGEX = "([A-Za-z\\s]+[,] [A-Za-z\\s]+)";
 		SFA<CharPred, Character> VIEW = (new SFAprovider(VIEW_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(VIEW.accepts(lOfS("Jean Sibelius, Finnish"), ba));
 		
@@ -262,7 +265,7 @@ public class FlashFillBench {
 		examples.add(new Pair<String, String>("Jean Sibelius, 1865-1957, Finnish", "Jean Sibelius, Finnish"));
 		examples.add(new Pair<String, String>("Jean, 1865-1957, Finnish", "Jean, Finnish"));
 		
-		ConstraintsTestSymbolic.customConstraintsTest(SOURCE, VIEW, 4, 1, fraction, examples, null, false);
+		ConstraintsTestSymbolic.customConstraintsTest(SOURCE, VIEW, 3, 1, fraction, examples, null, false);
 	}
 	
 	
