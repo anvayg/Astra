@@ -47,6 +47,26 @@ public class FlashFillBench {
         ConstraintsTestSymbolic.customConstraintsTest(CONFERENCE_NAME, CONFERENCE_ACRONYM, 1, 1, fraction, examples, null, false);
 	}
 	
+	/* extr-acronym-2: with lowercase 'of' */
+	
+	public void extrAcronym2() throws TimeoutException {
+		String CONFERENCE_NAME_REGEX = "[A-Za-z]+( [A-Za-z]+)*";
+		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba); 
+		assertTrue(CONFERENCE_NAME.accepts(lOfS("Principles of Programming Languages"), ba));
+		
+		String CONFERENCE_ACRONYM_REGEX = "[A-Z][A-Z]*";
+		SFA<CharPred, Character> CONFERENCE_ACRONYM = (new SFAprovider(CONFERENCE_ACRONYM_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(CONFERENCE_ACRONYM.accepts(lOfS("POPL"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+        
+        List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>("Principles of Programming Languages", "POPL"));
+        examples.add(new Pair<String, String>("Programming Language Design Implementation", "PLDI"));
+        
+        ConstraintsTestSymbolic.customConstraintsTest(CONFERENCE_NAME, CONFERENCE_ACRONYM, 2, 1, fraction, examples, null, false);
+	}
+	
 	/* extr_fname-err */
 	public void extrFnameErr() throws TimeoutException {
 		
@@ -228,7 +248,7 @@ public class FlashFillBench {
 	}
 	
 	/* bibtex-to-readable-title */
-	@Test
+	
 	public void bibtexToReadableTitle() throws TimeoutException {
 		String BIBTEX_TITLE_REGEX = "title=[{]([A-Z][a-z]*)(\\s[A-Z][a-z]*)*[}]";
 		SFA<CharPred, Character> BIBTEX_TITLE = (new SFAprovider(BIBTEX_TITLE_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
@@ -238,12 +258,13 @@ public class FlashFillBench {
 		SFA<CharPred, Character> READABLE_TITLE = (new SFAprovider(READABLE_TITLE_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(READABLE_TITLE.accepts(lOfS("ti - Boomerang Resourceful Lenses For String Data"), ba));
 		
-		int[] fraction = new int[] {1, 1};
+		int[] fraction = new int[] {3, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("title={Boomerang}", "ti - Boomerang"));
+		examples.add(new Pair<String, String>("title={Boom}", "ti - Boom"));
+		examples.add(new Pair<String, String>("title={Lenses}", "ti - Lenses"));
 		
-		ConstraintsTestSymbolic.customConstraintsTest(BIBTEX_TITLE, READABLE_TITLE, 10, 1, fraction, examples, null, false);
+		ConstraintsTestSymbolic.customConstraintsTest(BIBTEX_TITLE, READABLE_TITLE, 5, 1, fraction, examples, null, false);
 	}
 	
 	/* Bommerang_composers: source_to_views */
@@ -268,6 +289,60 @@ public class FlashFillBench {
 		ConstraintsTestSymbolic.customConstraintsTest(SOURCE, VIEW, 3, 1, fraction, examples, null, false);
 	}
 	
+	/* DOS-to-Unix line endings */
+	
+	public void dosToUnix() throws TimeoutException {
+		String DOS_REGEX = "[A-Za-z0-9]*(\\r\\n[A-Za-z0-9]*)*";
+		SFA<CharPred, Character> DOS = (new SFAprovider(DOS_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(DOS.accepts(lOfS("a\r\na"), ba));
+		
+		String UNIX_REGEX = "[A-Za-z0-9]*(\\n[A-Za-z0-9]*)*";
+		SFA<CharPred, Character> UNIX = (new SFAprovider(UNIX_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(UNIX.accepts(lOfS("a\na"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("abc", "abc"));
+		examples.add(new Pair<String, String>("\r\n", "\n"));
+        
+        ConstraintsTestSymbolic.customConstraintsTest(DOS, UNIX, 2, 1, fraction, examples, null, false);
+	}
+	
+	/* Unix-to-DOS line endings */
+	
+	public void unixToDos() throws TimeoutException {
+		String DOS_REGEX = "[A-Za-z0-9]*(\\r\\n[A-Za-z0-9]*)*";
+		SFA<CharPred, Character> DOS = (new SFAprovider(DOS_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		
+		String UNIX_REGEX = "[A-Za-z0-9]*(\\n[A-Za-z0-9]*)*";
+		SFA<CharPred, Character> UNIX = (new SFAprovider(UNIX_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("abc", "abc"));
+        examples.add(new Pair<String, String>("\n", "\r\n"));
+        
+        ConstraintsTestSymbolic.customConstraintsTest(UNIX, DOS, 2, 2, fraction, examples, null, false);
+	}
+	
+	/* CSV separator conversion */
+	@Test
+	public void changeCSV() throws TimeoutException {
+		String DOT_REGEX = "[A-Za-z0-9]*([.] [A-Za-z0-9]*)*";
+		SFA<CharPred, Character> DOT = (new SFAprovider(DOT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		
+		String COMMA_REGEX = "[A-Za-z0-9]*([,] [A-Za-z0-9]*)*";
+		SFA<CharPred, Character> COMMA = (new SFAprovider(COMMA_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("a. b", "a, b"));
+		
+		ConstraintsTestSymbolic.customConstraintsTest(DOT, COMMA, 1, 1, fraction, examples, null, false);
+	}
 	
 	// -------------------------
 	// Auxiliary methods

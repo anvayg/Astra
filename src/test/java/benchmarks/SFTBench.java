@@ -93,8 +93,47 @@ public class SFTBench {
 	/* QuicktimePadder: requires memory? or non-determinism? */
 	
 	
-	/* getTags -> deterministic */
+	/* GetTags */
 	public static SFT<CharPred, CharFunc, Character> GetTags;
+	
+	/* GetTags */
+	public static SFT<CharPred, CharFunc, Character> GetTagsBuggy;
+	
+	/* Missing transition from state 2 to state 1 */
+	private static SFT<CharPred, CharFunc, Character> MkGetTagsSFTBuggy() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		List<CharFunc> output00 = new ArrayList<CharFunc>();
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, ba.MkNot(new CharPred('<')), output00));
+
+		List<CharFunc> output01 = new ArrayList<CharFunc>();
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 1, new CharPred('<'), output01));
+
+		List<CharFunc> output11 = new ArrayList<CharFunc>();
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 1, new CharPred('<'), output11));
+
+		List<CharFunc> output12 = new ArrayList<CharFunc>();
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 2, ba.MkNot(new CharPred('<')), output12));
+
+		List<CharFunc> output13 = new ArrayList<CharFunc>();
+		output13.add(new CharConstant('<'));
+		output13.add(CharOffset.IDENTITY);
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 3, ba.MkNot(new CharPred('<')), output13));
+
+		List<CharFunc> output20 = new ArrayList<CharFunc>();
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(2, 0, ba.MkAnd(ba.MkNot(new CharPred('<')), ba.MkNot(new CharPred('>'))), output20));
+
+		List<CharFunc> output30 = new ArrayList<CharFunc>();
+		output30.add(CharOffset.IDENTITY);
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(3, 0, new CharPred('>'), output30));
+
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails.put(0, new HashSet<List<Character>>());
+		finStatesAndTails.put(1, new HashSet<List<Character>>());
+		finStatesAndTails.put(2, new HashSet<List<Character>>());
+
+		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
+	}
 	
 	/* Assume that there are no substrings of the form '<a' in the input, for experimenting */
 	private static SFT<CharPred, CharFunc, Character> MkGetTagsSFTMod() throws TimeoutException {
@@ -125,34 +164,36 @@ public class SFTBench {
 		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
 	}
 	
-	
+	@Test
 	public void getTags() throws TimeoutException {
+		GetTagsBuggy = MkGetTagsSFTBuggy();
+		SFA<CharPred, Character> inputLang = GetTagsBuggy.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputLang);
+		
 		GetTags = GetTag.MkGetTagsSFT();
+		
+		SFA<CharPred, Character> inputCorrect = GetTags.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputCorrect);
+	
+		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba);
+		System.out.println(target.toDotString(ba));
+		
+		System.out.println(GetTagsBuggy.toDotString(ba));
 		System.out.println(GetTags.toDotString(ba));
-		System.out.println(GetTags.isDeterministic());
 		
-		SFA<CharPred, Character> domain = GetTags.getDomain(ba).removeEpsilonMoves(ba);
-		assertTrue(domain.accepts(lOfS(""), ba));
-		assertTrue(domain.accepts(lOfS(""), ba));
+		SFA<CharPred, Character> source = inputCorrect.minus(inputLang, ba);
+		System.out.println(source.toDotString(ba));
+		System.out.println(source.isDeterministic());
 		
-		SFA<CharPred, Character> range = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba);
-		
-		System.out.println(domain);
-		System.out.println(range);
-//		System.out.println(domain.toDotString(ba));
-//		System.out.println(range.toDotString(ba));
 		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("<<s>", "<s>"));
-		
-		
-		ConstraintsTestSymbolic.customConstraintsTest(domain, range, 3, 2, fraction, examples, null, false);
 	}
 	
 	/* Deterministic variant of GetTags */
-	@Test
+	
 	public void getTagsMod() throws TimeoutException {
 		GetTags = MkGetTagsSFTMod();
 		System.out.println(GetTags.toDotString(ba));
@@ -166,17 +207,21 @@ public class SFTBench {
 		
 		System.out.println(domain);
 		System.out.println(range);
-		System.out.println(domain.toDotString(ba));
-		System.out.println(range.toDotString(ba));
 		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("<<s>", "<s>"));
+		examples.add(new Pair<String, String>("<s><t>", "<s><t>"));
 		
 		ConstraintsTestSymbolic.customConstraintsTest(domain, range, 3, 2, fraction, examples, null, false);
 	}
 	
+	/* Repair escapeQuotesBuggy */
+	
+	public void escapeQuotesBuggyRepair() throws TimeoutException {
+		
+	}
 	
 	private static List<Character> lOfS(String s) {
 		List<Character> l = new ArrayList<Character>();
