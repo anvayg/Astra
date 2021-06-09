@@ -164,32 +164,42 @@ public class SFTBench {
 		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
 	}
 	
-	@Test
+	
 	public void getTags() throws TimeoutException {
 		GetTagsBuggy = MkGetTagsSFTBuggy();
-		SFA<CharPred, Character> inputLang = GetTagsBuggy.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputLang);
-		
 		GetTags = GetTag.MkGetTagsSFT();
-		
-		SFA<CharPred, Character> inputCorrect = GetTags.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputCorrect);
-	
-		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba);
-		System.out.println(target.toDotString(ba));
-		
 		System.out.println(GetTagsBuggy.toDotString(ba));
 		System.out.println(GetTags.toDotString(ba));
 		
-		SFA<CharPred, Character> source = inputCorrect.minus(inputLang, ba);
-		System.out.println(source.toDotString(ba));
-		System.out.println(source.isDeterministic());
+		SFA<CharPred, Character> inputLang = GetTagsBuggy.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputLang.toDotString(ba));
 		
+		SFA<CharPred, Character> inputCorrect = GetTags.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputCorrect.toDotString(ba));
+		
+		SFA<CharPred, Character> source = inputCorrect.minus(inputLang, ba).determinize(ba);
+		assertTrue(source.accepts(lOfS("<<s<"), ba));
+		assertTrue(source.accepts(lOfS("<<s<s>"), ba));
+		assertTrue(source.accepts(lOfS("<<s<st"), ba));
+		System.out.println(source.toDotString(ba));
+	
+		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(target.toDotString(ba));
 		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("<<s>", "<s>"));
+		examples.add(new Pair<String, String>("<<s<", ""));
+		examples.add(new Pair<String, String>("<<s<s>", "<s>"));
+		examples.add(new Pair<String, String>("<<s<st", ""));
+		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
+		
+		// restrict domain to add final states
+		SFT<CharPred, CharFunc, Character> restrictSFT = synthSFT.domainRestriction(source, ba);
+		
+		SFT<CharPred, CharFunc, Character> repairSFT = GetTagsBuggy.unionWith(restrictSFT, ba);
+		System.out.println(repairSFT.toDotString(ba));
+		System.out.println(repairSFT.getInitialState());
 	}
 	
 	/* Deterministic variant of GetTags */
@@ -217,10 +227,109 @@ public class SFTBench {
 		ConstraintsTestSymbolic.customConstraintsTest(domain, range, 3, 2, fraction, examples, null, false);
 	}
 	
-	/* Repair escapeQuotesBuggy */
+	private static SFT<CharPred, CharFunc, Character> mkEscapeQuotesBuggy() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions16 = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+		List<CharFunc> output161 = new ArrayList<CharFunc>();
+		output161.add(CharOffset.IDENTITY);
+		CharPred quotes = ba.MkOr(new CharPred('\''), new CharPred('\"'));
+		CharPred backslash = new CharPred('\\');
+		CharPred notQuotesAndBackslash = ba.MkAnd(ba.MkNot(quotes), ba.MkNot(backslash));
+		transitions16.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, notQuotesAndBackslash, output161));
+		List<CharFunc> output162 = new ArrayList<CharFunc>();
+		output162.add(new CharConstant('\\'));
+		output162.add(CharOffset.IDENTITY);
+		transitions16.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, quotes, output162));
+		List<CharFunc> output163 = new ArrayList<CharFunc>();
+		output163.add(CharOffset.IDENTITY);
+		output163.add(CharOffset.IDENTITY);
+		transitions16.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 1, backslash, output163));
+		List<CharFunc> output164 = new ArrayList<CharFunc>();
+		output164.add(CharOffset.IDENTITY);
+		output164.add(CharOffset.IDENTITY);
+		transitions16.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 0, backslash, output164)); // bug here
+		List<CharFunc> output165 = new ArrayList<CharFunc>();
+		output165.add(CharOffset.IDENTITY);
+		transitions16.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 0, ba.MkNot(backslash), output165));
+		Map<Integer, Set<List<Character>>> finStatesAndTails16 = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails16.put(0, new HashSet<List<Character>>());
+		return SFT.MkSFT(transitions16, 0, finStatesAndTails16, ba);
+	}
 	
+	private static SFT<CharPred, CharFunc, Character> mkEscapeQuotes() throws TimeoutException {
+		CharPred quotes = ba.MkOr(new CharPred('\''), new CharPred('\"'));
+		CharPred backslash = new CharPred('\\');
+		CharPred notQuotesAndBackslash = ba.MkAnd(ba.MkNot(quotes), ba.MkNot(backslash));
+		List<SFTMove<CharPred, CharFunc, Character>> transitions17 = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+		List<CharFunc> output171 = new ArrayList<CharFunc>();
+		output171.add(CharOffset.IDENTITY);
+		transitions17.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, notQuotesAndBackslash, output171));
+		List<CharFunc> output172 = new ArrayList<CharFunc>();
+		output172.add(new CharConstant('\\'));
+		output172.add(CharOffset.IDENTITY);
+		transitions17.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, quotes, output172));
+		List<CharFunc> output173 = new ArrayList<CharFunc>();
+		output173.add(CharOffset.IDENTITY); // corrected
+		transitions17.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 1, backslash, output173));
+		List<CharFunc> output174 = new ArrayList<CharFunc>();
+		output174.add(CharOffset.IDENTITY);
+		transitions17.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 0, backslash, output174)); // corrected
+		List<CharFunc> output175 = new ArrayList<CharFunc>();
+		output175.add(CharOffset.IDENTITY);
+		transitions17.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 0, ba.MkNot(backslash), output175));
+		Map<Integer, Set<List<Character>>> finStatesAndTails17 = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails17.put(0, new HashSet<List<Character>>());
+		// finStatesAndTails17.put(1, new HashSet<List<Character>>());
+		return SFT.MkSFT(transitions17, 0, finStatesAndTails17, ba);
+	}
+	
+	/* Repair escapeQuotesBuggy */
+	@Test
 	public void escapeQuotesBuggyRepair() throws TimeoutException {
+		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkEscapeQuotesBuggy();
+		System.out.println(EscapeQuotesBuggy.toDotString(ba));
 		
+		SFT<CharPred, CharFunc, Character> EscapeQuotes = mkEscapeQuotes();
+		System.out.println(EscapeQuotes.toDotString(ba));
+		
+		SFA<CharPred, Character> inputLang = EscapeQuotesBuggy.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputLang.toDotString(ba));
+		
+		SFA<CharPred, Character> inputCorrect = EscapeQuotes.getDomain(ba).removeEpsilonMoves(ba);
+		System.out.println(inputCorrect.toDotString(ba));
+		
+		SFA<CharPred, Character> outputLang = EscapeQuotesBuggy.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(outputLang.toDotString(ba));
+		
+		SFA<CharPred, Character> outputCorrect = EscapeQuotes.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(outputCorrect.toDotString(ba));
+		
+		
+		SFA<CharPred, Character> outputDiff = outputLang.minus(outputCorrect, ba);
+		System.out.println(outputDiff.toDotString(ba));
+		
+		
+		SFA<CharPred, Character> source = outputDiff;
+		SFA<CharPred, Character> target = outputCorrect;
+		
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("\\\\\"", "\\\""));
+		// examples.add(new Pair<String, String>("\\\\\'", "\\\'"));
+		examples.add(new Pair<String, String>("\\\\\"\\\"", "\\\"\\\"")); 	
+		examples.add(new Pair<String, String>("\\\\\\\\\\\\\"", "\\\\\\\""));
+		examples.add(new Pair<String, String>("\\\\\"\\\\\"", "\\\"\\\""));
+		
+		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
+		System.out.println(synthSFT.toDotString(ba));
+		
+		// restrict domain to add final states
+		SFT<CharPred, CharFunc, Character> restrictSFT = synthSFT.domainRestriction(source, ba);
+		System.out.println(restrictSFT.toDotString(ba));
+				
+		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(restrictSFT, ba);
+		System.out.println(repairSFT.toDotString(ba));
 	}
 	
 	private static List<Character> lOfS(String s) {
