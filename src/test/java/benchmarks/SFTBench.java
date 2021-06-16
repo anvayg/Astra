@@ -316,10 +316,12 @@ public class SFTBench {
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("\\\\\"", "\\\""));
-		// examples.add(new Pair<String, String>("\\\\\'", "\\\'"));
+		examples.add(new Pair<String, String>("\\\\\'", "\\\'"));
 		examples.add(new Pair<String, String>("\\\\\"\\\"", "\\\"\\\"")); 	
 		examples.add(new Pair<String, String>("\\\\\\\\\\\\\"", "\\\\\\\""));
 		examples.add(new Pair<String, String>("\\\\\"\\\\\"", "\\\"\\\""));
+		examples.add(new Pair<String, String>("\\\\aa\\\\\"", "\\aa\\\""));
+		examples.add(new Pair<String, String>("\\\\\'a\\\\\\\\a", "\\\'a\\\\a"));
 		
 		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
 		System.out.println(synthSFT.toDotString(ba));

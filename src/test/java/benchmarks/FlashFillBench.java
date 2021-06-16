@@ -105,7 +105,7 @@ public class FlashFillBench {
 	
 	
 	/* extr_odds */
-	
+	@Test
 	public void extrOdds() throws TimeoutException {
 		String UNCLEANED_DATA_REGEX = "([(][)]|[0-9][0-9]*)*(([(][0-9][0-9]*/[0-9][0-9]*[)])([(][)]|[0-9][0-9]*)*)*";
 		SFA<CharPred, Character> UNCLEANED_DATA = (new SFAprovider(UNCLEANED_DATA_REGEX, ba)).getSFA().removeEpsilonMoves(ba).determinize(ba);
@@ -121,7 +121,7 @@ public class FlashFillBench {
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 	    examples.add(new Pair<String, String>("3(1/5)2", "(1/5)#"));
-	    examples.add(new Pair<String, String>("(14/15)()21", "(14/15)#"));
+	    examples.add(new Pair<String, String>("(142/12)()21", "(142/12)#"));
 	    examples.add(new Pair<String, String>("5()(70/8)()21", "(70/8)#"));
 		
 		ConstraintsTestSymbolic.customConstraintsTest(UNCLEANED_DATA, CLEANEDODDS, 3, 2, fraction, examples, null, false);
@@ -233,18 +233,18 @@ public class FlashFillBench {
 	public void titleConverter() throws TimeoutException {
 		String TITLE_LEGACY_REGEX = "<Field Id=1>[a-zA-Z\\s0-9]*</Field>";
 		SFA<CharPred, Character> TITLE_LEGACY = (new SFAprovider(TITLE_LEGACY_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		assertTrue(TITLE_LEGACY.accepts(lOfS("<Field Id=1>title</Field>"), ba));
+		assertTrue(TITLE_LEGACY.accepts(lOfS("<Field Id=1>ti</Field>"), ba));
 		
-		String TITLE_MODERN_REGEX = "(|\"title\"=\"[a-zA-Z\\s0-9][a-zA-Z\\s0-9]*\")";
+		String TITLE_MODERN_REGEX = "\"title\"=\"[a-zA-Z\\s0-9][a-zA-Z\\s0-9]*\"";
 		SFA<CharPred, Character> TITLE_MODERN = (new SFAprovider(TITLE_MODERN_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		assertTrue(TITLE_MODERN.accepts(lOfS("\"title\"=\"title\""), ba));
+		assertTrue(TITLE_MODERN.accepts(lOfS("\"title\"=\"ti\""), ba));
 		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("<Field Id=1>title</Field>", "\"title\"=\"title\""));
 		
-		ConstraintsTestSymbolic.customConstraintsTest(TITLE_LEGACY, TITLE_MODERN, TITLE_LEGACY.stateCount(), 2, fraction, examples, null, false);
+		ConstraintsTestSymbolic.customConstraintsTest(TITLE_LEGACY, TITLE_MODERN, 3, 1, fraction, examples, null, false);
 	}
 	
 	/* bibtex-to-readable-title */
@@ -328,7 +328,7 @@ public class FlashFillBench {
 	}
 	
 	/* CSV separator conversion */
-	@Test
+	
 	public void changeCSV() throws TimeoutException {
 		String DOT_REGEX = "[A-Za-z0-9]*([.] [A-Za-z0-9]*)*";
 		SFA<CharPred, Character> DOT = (new SFAprovider(DOT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
