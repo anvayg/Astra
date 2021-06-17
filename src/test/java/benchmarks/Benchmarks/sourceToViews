@@ -1,0 +1,6 @@
+([A-Za-z\\s]+[,] [0-9]{4}[-][0-9]{4}[,] [A-Za-z\\s]+)
+([A-Za-z\\s]+[,] [A-Za-z\\s]+)
+Jean Sibelius, 1865-1957, Finnish
+Jean Sibelius, Finnish
+Jean, 1865-1957, Finnish
+Jean, Finnish
