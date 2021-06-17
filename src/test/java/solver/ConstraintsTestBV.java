@@ -101,7 +101,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		
 		// Changed: not making source DFA total
 		ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
-		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug);
 		
 		for (Pair<String, String> example : ioExamples) {
         	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);

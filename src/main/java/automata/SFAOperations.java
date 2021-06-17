@@ -196,7 +196,6 @@ public class SFAOperations {
 		return newString.toString();
 	}
 	
-	
 	/* Transform aut such that there is <= 1 transition between any 2 states */
 	public static SFA<CharPred, Character> pseudoNormalize(SFA<CharPred, Character> aut, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		Collection<Integer> states = aut.getStates();

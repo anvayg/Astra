@@ -22,6 +22,7 @@ import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.IntSort;
 import com.microsoft.z3.Model;
+import com.microsoft.z3.Params;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Sort;
 import com.microsoft.z3.Status;
@@ -89,16 +90,23 @@ public class ConstraintsBV {
 	
 	/* Method for mkConstraints */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
-		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, smtFile, debug);
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
+		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, solution, ba, smtFile, debug);
 	}
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, 
-			String smtFile, boolean debug) throws TimeoutException {
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, String smtFile, boolean debug) throws TimeoutException {
+		/* Set params */
+		Params p = ctx.mkParams();
+		p.add("smt.relevancy", 0);
+		p.add("smt.bv.eq_axioms", false);
+		p.add("smt.phase_caching_on", 80000);
+		solver.setParameters(p);
+		
 		/* bit-vec and bool sorts */
 		BitVecSort BV = ctx.mkBitVecSort(8);
 		Sort B = ctx.getBoolSort();
@@ -591,7 +599,7 @@ public class ConstraintsBV {
 			exampleCount++;
 		}
 		
-		/* use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
+		/* Use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
 		if (template != null) {
 			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
 				Integer stateFrom = transition.from;
@@ -603,6 +611,46 @@ public class ConstraintsBV {
 				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
+			}
+		}
+		
+		/* If previous solution provided, construct satisfying assignment and negate it */
+		if (solution != null) {
+			Expr negModel = ctx.mkTrue();
+			Collection<Integer> states = solution.getStates();
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : solution.getInputMovesFrom(states)) {
+				Integer stateFrom = transition.from;
+				Character move = transition.getWitness(ba);
+				Integer stateTo = transition.to;
+				List<CharFunc> outputFunc = transition.outputFunctions;
+				
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				BitVecExpr outputLen = (BitVecNum) ctx.mkNumeral(outputFunc.size(), BV);
+				
+				/* d2exp */
+				Expr d2exp = d2.apply(q, a);
+				negModel = ctx.mkAnd(negModel, ctx.mkEq(d2exp, qPrime));
+				
+				/* outputLenExpr */
+				Expr outputLenExpr = out_len.apply(q, a);
+				negModel = ctx.mkAnd(negModel, ctx.mkEq(outputLenExpr, outputLen));
+				
+				/* d1exp: iterate through outputFunc */
+				int index = 0;
+				for (CharFunc f : outputFunc) {
+					if (f != null && f instanceof CharConstant) { 	// all the CharFuncs should be constants
+						Character out = ((CharConstant)f).c;
+						BitVecExpr outMoveNum = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+						
+						Expr d1exp = d1.apply(q, a, (BitVecNum) ctx.mkNumeral(index, BV));
+						negModel = ctx.mkAnd(negModel, ctx.mkEq(d1exp, outMoveNum));
+					}
+				}
+				
+				/* negate model */
+				solver.add(negModel);
 			}
 		}
 		
@@ -707,14 +755,16 @@ public class ConstraintsBV {
 					
 					/* output_len */
 					Expr outputLenExpr = out_len.apply(q1, a);
-					int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
+					BitVecNum outputLenNum = (BitVecNum) m.evaluate(outputLenExpr, false);
+					int outputLen = outputLenNum.getInt();
 								
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
 						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
 						Expr d1exp = d1.apply(q1, a, index);
-						int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
+						BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
+						int outMove = outMoveNum.getInt();
 						Character output = revAlphabetMap.get(outMove);
 						outputFunc.add(new CharConstant(output));
 					}
@@ -732,18 +782,21 @@ public class ConstraintsBV {
 							
 						/* get state to */
 						Expr d2exp = d2.apply(state, a);
-						int q2 = ((BitVecNum) m.evaluate(d2exp, false)).getInt();
+						BitVecNum q2num = (BitVecNum) m.evaluate(d2exp, false);
+						int q2 = q2num.getInt();
 										
 						/* output_len */
 						Expr outputLenExpr = out_len.apply(state, a);
-						int outputLen = ((BitVecNum) m.evaluate(outputLenExpr, false)).getInt();
+						BitVecNum outputLenNum = (BitVecNum) m.evaluate(outputLenExpr, false);
+						int outputLen = outputLenNum.getInt();
 										
 						/* get output */
 						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 						for (int i = 0; i < outputLen; i++) {
 							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
 							Expr d1exp = d1.apply(state, a, index);
-							int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
+							BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
+							int outMove = outMoveNum.getInt();
 							Character output = revAlphabetMap.get(outMove);
 							outputFunc.add(new CharConstant(output));
 						}
@@ -753,7 +806,7 @@ public class ConstraintsBV {
 					}
 				}
 			}
-					
+			
 		} else {
 			long stopTime = System.nanoTime();
 			System.out.println((stopTime - startTime));

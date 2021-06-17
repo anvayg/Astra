@@ -103,7 +103,7 @@ public class Constraints {
 	
 	/* Method for mkConstraints */
 	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
-			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
 		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, ba, smtFile, debug);
 	}
 		

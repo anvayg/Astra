@@ -205,10 +205,10 @@ public class ConstraintsTest {
 		SFT<CharPred, CharFunc, Character> mySFT = null;
 		if (encoding.equals("int")) {
 			Constraints c = new Constraints(ctx, source, targetTotal, alphabetMap, ba);
-			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug);
 		} else if (encoding.equals("bitvec")) {
 			ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
-			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, smtFile, debug);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug);
 		} else {
 			throw new IllegalArgumentException("Invalid encoding string");
 		}
