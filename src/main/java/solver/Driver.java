@@ -100,7 +100,7 @@ public class Driver {
 	}
 
 	
-	public static Triple<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>, String> 
+	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
 			SFA<CharPred, Character> template) throws TimeoutException {
@@ -130,28 +130,26 @@ public class Driver {
 		// Make target FA total
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(targetFinite, alphabetSet, ba);
 		
-		
 		SFT<CharPred, CharFunc, Character> mySFT = null;
 		SFT<CharPred, CharFunc, Character> mySFT2 = null;
 		String witness = null;
 		ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
+		long startTime = System.nanoTime();
 		if (template != null) {
 			mySFT = c.mkConstraints(template.stateCount(), outputBound, fraction, examplesFinite, sourceFinite, null, null, false);
 		} else {
 			mySFT = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, null, null, false);
 		}
+		long stopTime = System.nanoTime();
+		long time1 = stopTime - startTime;
 		
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
+			startTime = System.nanoTime();
 			mySFT2 = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, mySFT, null, false);
-			
-			if (mySFT2.getTransitions().size() != 0) {
-				// Check equality
-				if (!SFT.decide1equality(mySFT, mySFT2, ba)) {
-					witness = SFT.witness1disequality(mySFT, mySFT2, ba).toString();
-				}
-			}
+			stopTime = System.nanoTime();
 		}
+		long time2 = stopTime - startTime;
 		
 		// Call minterm expansion
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third, ba);
@@ -159,11 +157,19 @@ public class Driver {
 		SFT<CharPred, CharFunc, Character> mySFT2expanded = null;
 		if (mySFT2 != null) mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, triple.third, ba);
 		
-		for (Pair<String, String> example : examples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first, ba);
-        	assertTrue(exampleOutput.equals(example.second));
-        }
+		if (mySFT2expanded != null) {
+			System.out.println(mySFTexpanded.toDotString(ba));
+			System.out.println(mySFT2expanded.toDotString(ba));
+			// Check equality of expanded transducers
+			if (!SFT.decide1equality(mySFTexpanded.domainRestriction(source, ba), mySFT2expanded.domainRestriction(source, ba), ba)) {
+				System.out.println("Not equiv");
+				witness = SFT.witness1disequality(mySFTexpanded.domainRestriction(source, ba), mySFT2expanded.domainRestriction(source, ba), ba).toString();
+			}
+		}
 		
-		return new Triple<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>, String>(mySFTexpanded, mySFT2expanded, witness);
+		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTexpanded, time1);
+		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2expanded, time2);
+		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
 	}
 }
+

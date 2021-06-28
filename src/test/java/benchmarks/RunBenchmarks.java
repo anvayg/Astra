@@ -47,6 +47,7 @@ public class RunBenchmarks {
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		while (sc.hasNextLine()) {
 			String input = sc.nextLine();
+			if (input.equals("")) break;
 			String output = sc.nextLine();
 			
 			examples.add(new Pair<String, String>(input, output));
@@ -74,7 +75,7 @@ public class RunBenchmarks {
 		br.close();
 	}
 	
-	public static void runBenchmark(String filename) throws Exception {
+	public static void runBenchmark(String filename, String benchmarkName) throws Exception {
 		File file = new File(filename);
 		Scanner sc = null;
 		try {
@@ -91,9 +92,8 @@ public class RunBenchmarks {
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		while (sc.hasNextLine()) {
-			// If next line is newline
-			
 			String input = sc.nextLine();
+			if (input.equals("")) break;
 			String output = sc.nextLine();
 			
 			examples.add(new Pair<String, String>(input, output));
@@ -115,26 +115,57 @@ public class RunBenchmarks {
 		}
 		
 		SFA<CharPred, Character> source = (new SFAprovider(sourceRegex, ba)).getSFA().removeEpsilonMoves(ba);
+		if (!source.isDeterministic(ba)) source = source.determinize(ba);
 		SFA<CharPred, Character> target = (new SFAprovider(targetRegex, ba)).getSFA().removeEpsilonMoves(ba);
+		if (!target.isDeterministic(ba)) target = target.determinize(ba);
 		
-		Triple<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>, String> result = Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null);
-		SFT<CharPred, CharFunc, Character> mySFT = result.first;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second;
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null);
+		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
+		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
 		String witness = result.third;
+		
+		long time1 = result.first.second / 1000000;
+		long time2 = result.second.second / 1000000;
+		
 		System.out.println(mySFT.toDotString(ba));
 		
-		BufferedWriter br = new BufferedWriter(new FileWriter(new File("src/test/java/benchmarks/tmpOutput")));
+		BufferedWriter br = new BufferedWriter(new FileWriter(new File("src/test/java/benchmarks/tmpOutput"), true));
+		br.write(benchmarkName + "\n");
 		for (Pair<String, String> example : examples) {
         	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
         	try {
         		assertTrue(exampleOutput.equals(example.second));
         	} catch (AssertionError error) {
         		// TODO: Error collector
-        		br.write("Assertion failed\n");
+        		br.write("Assertion failed: " + exampleOutput + ", " + example.second + "\n");
         	}
         }
 		
-		br.write(mySFT.toDotString(ba));
+		if (mySFT.getTransitions().size() != 0) {
+			br.write("First SFT:\n");
+			br.write(mySFT.toDotString(ba) + "\n");
+			br.write("Synthesis time: " + time1 + "\n");
+		} else {
+			br.write("UNSAT\n");
+		}
+		
+		if (witness != null) {
+			br.write("Second SFT:\n");
+			br.write(mySFT.toDotString(ba) + "\n");
+			br.write("Synthesis time: " + time2 + "\n");
+
+			String witnessOutput1 = SFTOperations.getOutputString(mySFT, witness, ba);
+			String witnessOutput2 = SFTOperations.getOutputString(mySFT2, witness, ba);
+
+			br.write("Input on which SFTs differ: " + witness + "\n");
+			br.write("Output1: " + witnessOutput1 + "\n");
+			br.write("Output2: " + witnessOutput2 + "\n");
+		} else {
+			if (mySFT2 != null) br.write("Equivalent results");
+			else br.write("No other solution\n");
+		}
+		
+		br.write("\n\n");
 		br.close();
 	}
 
@@ -145,10 +176,20 @@ public class RunBenchmarks {
 		      
 			// List of all benchmarks
 		    File filesList[] = directoryPath.listFiles();
+		    
+		    // Reset output file
+		    BufferedWriter br = new BufferedWriter(new FileWriter(new File("src/test/java/benchmarks/tmpOutput")));
+		    br.write("Starting experiments\n");
+		    br.close();
 			
-		    for(File file : filesList) {
-		    	runBenchmarkBasic("src/test/java/benchmarks/Benchmarks/" + file.getName());
-		    }
+		    int counter = 0;
+//		    for(File file : filesList) {
+//		    	runBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName());
+//		    	// if (counter == 3) break;
+//		    	counter++;
+//		    }
+		    runBenchmark("src/test/java/benchmarks/Benchmarks/" + "extrAcronym2", "extrAcronym2");
+		    
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

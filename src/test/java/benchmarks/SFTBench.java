@@ -282,7 +282,6 @@ public class SFTBench {
 		return SFT.MkSFT(transitions17, 0, finStatesAndTails17, ba);
 	}
 	
-	/* Repair escapeQuotesBuggy */
 	@Test
 	public void escapeQuotesBuggyRepair() throws TimeoutException {
 		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkEscapeQuotesBuggy();
@@ -291,11 +290,41 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> EscapeQuotes = mkEscapeQuotes();
 		System.out.println(EscapeQuotes.toDotString(ba));
 		
-		SFA<CharPred, Character> inputLang = EscapeQuotesBuggy.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputLang.toDotString(ba));
+		SFA<CharPred, Character> outputLang = EscapeQuotesBuggy.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(outputLang.toDotString(ba));
 		
-		SFA<CharPred, Character> inputCorrect = EscapeQuotes.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputCorrect.toDotString(ba));
+		SFA<CharPred, Character> outputCorrect = EscapeQuotes.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(outputCorrect.toDotString(ba));
+		
+		SFA<CharPred, Character> source = outputLang;
+		SFA<CharPred, Character> target = outputCorrect;
+		
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("ab\\\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\\\\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\\\\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\\\\\\\ab", "ab\\\\ab"));
+		
+		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
+		System.out.println(synthSFT.toDotString(ba));
+				
+		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(synthSFT, ba);
+		System.out.println(repairSFT.toDotString(ba));
+	}
+	
+	
+	public void escapeQuotesSynthesis() throws TimeoutException {
+		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkEscapeQuotesBuggy();
+		System.out.println(EscapeQuotesBuggy.toDotString(ba));
+		
+		SFT<CharPred, CharFunc, Character> EscapeQuotes = mkEscapeQuotes();
+		System.out.println(EscapeQuotes.toDotString(ba));
+		
+		SFA<CharPred, Character> inputLang = EscapeQuotesBuggy.getDomain(ba);
+		System.out.println(inputLang.toDotString(ba));
 		
 		SFA<CharPred, Character> outputLang = EscapeQuotesBuggy.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
 		System.out.println(outputLang.toDotString(ba));
@@ -303,35 +332,21 @@ public class SFTBench {
 		SFA<CharPred, Character> outputCorrect = EscapeQuotes.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
 		System.out.println(outputCorrect.toDotString(ba));
 		
-		
-		SFA<CharPred, Character> outputDiff = outputLang.minus(outputCorrect, ba);
-		System.out.println(outputDiff.toDotString(ba));
-		
-		
-		SFA<CharPred, Character> source = outputDiff;
+		SFA<CharPred, Character> source = inputLang;
 		SFA<CharPred, Character> target = outputCorrect;
 		
 		
 		int[] fraction = new int[] {1, 1};
 		
+		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("\\\\\"", "\\\""));
-		examples.add(new Pair<String, String>("\\\\\'", "\\\'"));
-		examples.add(new Pair<String, String>("\\\\\"\\\"", "\\\"\\\"")); 	
-		examples.add(new Pair<String, String>("\\\\\\\\\\\\\"", "\\\\\\\""));
-		examples.add(new Pair<String, String>("\\\\\"\\\\\"", "\\\"\\\""));
-		examples.add(new Pair<String, String>("\\\\aa\\\\\"", "\\aa\\\""));
-		examples.add(new Pair<String, String>("\\\\\'a\\\\\\\\a", "\\\'a\\\\a"));
+		examples.add(new Pair<String, String>("ab\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\\\ab", "ab\\\\ab"));
+		examples.add(new Pair<String, String>("ab\\\"ab", "ab\\\"ab"));
 		
-		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
+		
+		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 2, fraction, examples, source, false);
 		System.out.println(synthSFT.toDotString(ba));
-		
-		// restrict domain to add final states
-		SFT<CharPred, CharFunc, Character> restrictSFT = synthSFT.domainRestriction(source, ba);
-		System.out.println(restrictSFT.toDotString(ba));
-				
-		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(restrictSFT, ba);
-		System.out.println(repairSFT.toDotString(ba));
 	}
 	
 	private static List<Character> lOfS(String s) {
