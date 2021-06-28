@@ -2,8 +2,11 @@ package automata;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
@@ -101,6 +104,19 @@ public class SFTOperations {
 		}
 		
 		return SFT.MkSFT(newTransitions, trans.getInitialState(), trans.getFinalStatesAndTails(), ba);
+	}
+	
+	
+	/* Makes all states final */
+	public static SFT<CharPred, CharFunc, Character> mkAllStatesFinal(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		Collection<Integer> states = trans.getStates();
+		
+		for (Integer state : states) {
+			finStatesAndTails.put(0, new HashSet<List<Character>>());
+		}
+		
+		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
 	}
 	
 }

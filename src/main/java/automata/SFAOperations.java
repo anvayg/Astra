@@ -238,6 +238,4 @@ public class SFAOperations {
 		return SFA.MkSFA(newTransitions, aut.getInitialState(), finalStates, ba, false, false);
 	}
 	
-	
-	
 }
