@@ -430,8 +430,8 @@ public class ConstraintsBV {
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
 			/* verify example */
-			if (!SFAOperations.isAcceptedBy(ioExample.first, source, ba)) throw new IllegalArgumentException();
-			if (!SFAOperations.isAcceptedBy(ioExample.second, target, ba)) throw new IllegalArgumentException();
+			if (!SFAOperations.isAcceptedBy(ioExample.first, source, ba)) throw new IllegalArgumentException("Example not accepted by source: " + ioExample.first);
+			if (!SFAOperations.isAcceptedBy(ioExample.second, target, ba)) throw new IllegalArgumentException("Example not accepted by target: " + ioExample.second);
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
@@ -649,9 +649,10 @@ public class ConstraintsBV {
 					}
 				}
 				
-				/* negate model */
-				solver.add(negModel);
 			}
+			
+			/* negate model */
+			solver.add(ctx.mkNot(negModel));
 		}
 		
 		
