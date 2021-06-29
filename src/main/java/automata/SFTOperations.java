@@ -42,6 +42,7 @@ public class SFTOperations {
 						if (f != null) {
 							Character out = ba.MkSubstFuncConst(f, next);
 							outputStr.append(out);
+							System.out.println(next + ", " + out);
 						}
 					}
 					state = transition.to;
@@ -113,7 +114,7 @@ public class SFTOperations {
 		Collection<Integer> states = trans.getStates();
 		
 		for (Integer state : states) {
-			finStatesAndTails.put(0, new HashSet<List<Character>>());
+			finStatesAndTails.put(state, new HashSet<List<Character>>());
 		}
 		
 		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
