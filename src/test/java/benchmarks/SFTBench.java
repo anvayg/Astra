@@ -3,11 +3,13 @@ package benchmarks;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import org.junit.Test;
@@ -20,6 +22,7 @@ import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
 import theory.characters.CharPred;
+import theory.characters.StdCharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
@@ -349,6 +352,157 @@ public class SFTBench {
 		System.out.println(synthSFT.toDotString(ba));
 	}
 	
+	
+	/* Repair */
+	
+	public static SFT<CharPred, CharFunc, Character> mkCaesarCipher() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		List<CharFunc> output00 = new ArrayList<CharFunc>();
+		output00.add(new CharOffset(3));
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, StdCharPred.ALPHA_NUM, output00));
+		
+
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails.put(0, new HashSet<List<Character>>());
+
+		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
+	}
+	
+	public static SFT<CharPred, CharFunc, Character> mkSwapCase() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		List<CharFunc> output00 = new ArrayList<CharFunc>();
+		output00.add(CharOffset.TO_LOWER_CASE);
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, StdCharPred.UPPER_ALPHA, output00));
+		
+		List<CharFunc> output001 = new ArrayList<CharFunc>();
+		output001.add(CharOffset.TO_UPPER_CASE);
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, StdCharPred.LOWER_ALPHA, output001));
+		
+		List<CharFunc> output002 = new ArrayList<CharFunc>();
+		output002.add(CharOffset.IDENTITY);
+		CharPred notUpperOrLower = ba.MkNot(ba.MkOr(StdCharPred.UPPER_ALPHA, StdCharPred.LOWER_ALPHA));
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, notUpperOrLower, output001));
+
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails.put(0, new HashSet<List<Character>>());
+
+		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
+	}
+	
+	public static SFT<CharPred, CharFunc, Character> mkEscapeBrackets() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		List<CharFunc> output00 = new ArrayList<CharFunc>();
+		output00.add(new CharConstant('&'));
+		output00.add(new CharConstant('l'));
+		output00.add(new CharConstant('t'));
+		output00.add(new CharConstant(';'));
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, new CharPred('<'), output00));
+		
+		List<CharFunc> output001 = new ArrayList<CharFunc>();
+		output001.add(new CharConstant('&'));
+		output001.add(new CharConstant('g'));
+		output001.add(new CharConstant('t'));
+		output001.add(new CharConstant(';'));
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, new CharPred('>'), output001));
+		
+		List<CharFunc> output002 = new ArrayList<CharFunc>();
+		output001.add(CharOffset.IDENTITY);
+		CharPred elseCase = ba.MkNot(ba.MkOr(new CharPred('<'), new CharPred('>')));
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, elseCase, output002));
+
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails.put(0, new HashSet<List<Character>>());
+
+		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
+	}
+	
+	public static SFT<CharPred, CharFunc, Character> mkAnsi() throws TimeoutException {
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		List<CharFunc> output00 = new ArrayList<CharFunc>();
+		output00.add(CharOffset.IDENTITY);
+		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, StdCharPred.TRUE, output00));
+
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		finStatesAndTails.put(0, new HashSet<List<Character>>());
+
+		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
+	}
+	
+	static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	
+	public static List<SFT<CharPred, CharFunc, Character>> createRepairBenchmarks(SFT<CharPred, CharFunc, Character> aut) throws TimeoutException {
+		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = new ArrayList<SFT<CharPred, CharFunc, Character>>();
+		
+		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : aut.getStates()) {
+			transitions.addAll(aut.getInputMovesFrom(state));
+		}
+
+		Random generator = new Random(1);
+
+		/* Pick a transition to modify */
+		int ran = generator.nextInt(transitions.size());
+
+		SFTInputMove<CharPred, CharFunc, Character> toModify = transitions.get(ran);
+
+		/* New outputs */
+		List<CharFunc> newOutput = new ArrayList<CharFunc>();
+		newOutput.add(new CharConstant(AB.charAt(generator.nextInt(AB.length()))));
+		SFTInputMove<CharPred, CharFunc, Character> newTrans = 
+				new SFTInputMove<CharPred, CharFunc, Character>(toModify.from, toModify.to, toModify.guard, newOutput);
+		
+		/* New transitions */
+		LinkedList<SFTMove<CharPred, CharFunc, Character>> newTransitions = (LinkedList<SFTMove<CharPred, CharFunc, Character>>) transitions.clone();
+		newTransitions.remove(ran);
+		newTransitions.add(newTrans);
+		
+		/* Modified SFT-1 */
+		SFT<CharPred, CharFunc, Character> modSFT1 = SFT.MkSFT(newTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba);
+		modifiedSFTs.add(modSFT1);
+		
+		
+		
+		/* Pick a transition to delete */
+		ran = generator.nextInt(transitions.size());
+		
+		newTransitions = (LinkedList<SFTMove<CharPred, CharFunc, Character>>) transitions.clone();
+		newTransitions.remove(ran);
+		
+		/* Modified SFT-2 */
+		SFT<CharPred, CharFunc, Character> modSFT2 = SFT.MkSFT(newTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba);
+		modifiedSFTs.add(modSFT2);
+		
+		
+		
+		/* Add a new random transition */
+		
+		/* State from */
+		Integer from = generator.nextInt(aut.stateCount());
+		
+		/* State to */
+		Integer to = generator.nextInt(aut.stateCount());
+		
+		/* New outputs */
+		newOutput = new ArrayList<CharFunc>();
+		newOutput.add(new CharConstant(AB.charAt(generator.nextInt(AB.length()))));
+		newTrans = new SFTInputMove<CharPred, CharFunc, Character>(from, to, StdCharPred.TRUE, newOutput);
+		
+		/* New transitions */
+		newTransitions = (LinkedList<SFTMove<CharPred, CharFunc, Character>>) transitions.clone();
+		newTransitions.add(newTrans);
+		
+		/* Modified SFT-3 */
+		SFT<CharPred, CharFunc, Character> modSFT3 = SFT.MkSFT(newTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba);
+		modifiedSFTs.add(modSFT3);
+		
+		return modifiedSFTs;
+	}
+	
 	private static List<Character> lOfS(String s) {
 		List<Character> l = new ArrayList<Character>();
 		char[] ca = s.toCharArray();
@@ -356,4 +510,18 @@ public class SFTBench {
 			l.add(ca[i]);
 		return l;
 	}
+	
+	// TODO
+	public static void main(String[] args) {
+		try {
+			List<SFT<CharPred, CharFunc, Character>> SFTList = new ArrayList<SFT<CharPred, CharFunc, Character>>();
+			SFTList.add(mkSwapCase());
+			for (SFT<CharPred, CharFunc, Character> aut : SFTList) {
+				createRepairBenchmarks(aut);
+			}
+		} catch (TimeoutException e) {
+			e.printStackTrace();
+		}
+	}
+	
 }
