@@ -430,8 +430,8 @@ public class ConstraintsBV {
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
 			/* verify example */
-			if (!SFAOperations.isAcceptedBy(ioExample.first, source, ba)) throw new IllegalArgumentException("Example not accepted by source: " + ioExample.first);
-			if (!SFAOperations.isAcceptedBy(ioExample.second, target, ba)) throw new IllegalArgumentException("Example not accepted by target: " + ioExample.second);
+			if (SFAOperations.getStateInFA(source, source.getInitialState(), ioExample.first, ba) == -1) throw new IllegalArgumentException("Illegal example for source: " + ioExample.first);
+			if (SFAOperations.getStateInFA(target, target.getInitialState(), ioExample.second, ba) == -1) throw new IllegalArgumentException("Illegal example for target: " + ioExample.second);
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
@@ -819,5 +819,6 @@ public class ConstraintsBV {
 		
 		return mySFT;
 	}
+
 }
 

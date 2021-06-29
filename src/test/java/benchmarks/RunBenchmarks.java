@@ -151,7 +151,7 @@ public class RunBenchmarks {
 		
 		if (witness != null) {
 			br.write("Second SFT:\n");
-			br.write(mySFT.toDotString(ba) + "\n");
+			br.write(mySFT2.toDotString(ba) + "\n");
 			br.write("Synthesis time: " + time2 + "\n");
 
 			String witnessOutput1 = SFTOperations.getOutputString(mySFT, witness, ba);
@@ -183,12 +183,11 @@ public class RunBenchmarks {
 		    br.close();
 			
 		    int counter = 0;
-//		    for(File file : filesList) {
-//		    	runBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName());
-//		    	// if (counter == 3) break;
-//		    	counter++;
-//		    }
-		    runBenchmark("src/test/java/benchmarks/Benchmarks/" + "extrAcronym2", "extrAcronym2");
+		    for(File file : filesList) {
+		    	runBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName());
+		    	// if (counter == 3) break;
+		    	counter++;
+		    }
 		    
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -153,22 +153,33 @@ public class Driver {
 		
 		// Call minterm expansion
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third, ba);
+		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded, ba).domainRestriction(source, ba);
 		
 		SFT<CharPred, CharFunc, Character> mySFT2expanded = null;
-		if (mySFT2 != null) mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, triple.third, ba);
+		SFT<CharPred, CharFunc, Character> mySFT2restricted = null;
+		if (mySFT2 != null) {
+			mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, triple.third, ba);
+			mySFT2restricted = SFTOperations.mkAllStatesFinal(mySFT2expanded, ba).domainRestriction(source, ba);
+		}
 		
-		if (mySFT2expanded != null) {
-			System.out.println(mySFTexpanded.toDotString(ba));
-			System.out.println(mySFT2expanded.toDotString(ba));
+		if (mySFT2restricted != null) {
+			System.out.println(mySFTrestricted.toDotString(ba));
+			System.out.println(mySFT2restricted.toDotString(ba));
 			// Check equality of expanded transducers
-			if (!SFT.decide1equality(mySFTexpanded.domainRestriction(source, ba), mySFT2expanded.domainRestriction(source, ba), ba)) {
+			if (!SFT.decide1equality(mySFTrestricted, mySFT2restricted, ba)) {
 				System.out.println("Not equiv");
-				witness = SFT.witness1disequality(mySFTexpanded.domainRestriction(source, ba), mySFT2expanded.domainRestriction(source, ba), ba).toString();
+				List<Character> witnessChars = SFT.witness1disequality(mySFTrestricted, mySFT2restricted, ba);
+				
+				StringBuilder sb = new StringBuilder();
+				for (Character ch : witnessChars) {
+					sb.append(ch);
+				}
+				witness = sb.toString();
 			}
 		}
 		
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTexpanded, time1);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2expanded, time2);
+		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTrestricted, time1);
+		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2restricted, time2);
 		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
 	}
 }

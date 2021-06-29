@@ -42,7 +42,7 @@ public class SFTOperations {
 						if (f != null) {
 							Character out = ba.MkSubstFuncConst(f, next);
 							outputStr.append(out);
-							System.out.println(next + ", " + out);
+							// System.out.println(next + ", " + out);
 						}
 					}
 					state = transition.to;
