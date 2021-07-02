@@ -11,6 +11,10 @@ import java.util.Set;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 
+import automata.sfa.SFA;
+import automata.sfa.SFAEpsilon;
+import automata.sfa.SFAInputMove;
+import automata.sfa.SFAMove;
 import theory.BooleanAlgebra;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
@@ -51,6 +55,23 @@ public class SFTOperations {
 		}
 		
 		return outputStr.toString();
+	}
+	
+	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+		// Get all predicates
+		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 
+
+		for (Integer state : aut.getStates()) {
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : aut.getInputMovesFrom(state)) {
+				predicates.add(transition.guard);
+			}
+		}
+		
+		// Get minterms
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predicates);
+		
+		return minterms;
 	}
 	
 	/* Performs minterm expansion */
@@ -118,6 +139,21 @@ public class SFTOperations {
 		}
 		
 		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
+	}
+	
+	/* Variant of getDomain that does not normalize */
+	public static SFA<CharPred, Character> getDomain(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
+
+		for (SFTInputMove<CharPred, CharFunc, Character> t : trans.getInputMovesFrom(trans.getStates()))
+			transitions.add(new SFAInputMove<CharPred, Character>(t.from, t.to, t.guard));
+
+		for (SFTEpsilon<CharPred, CharFunc, Character> t : trans.getEpsilonMovesFrom(trans.getStates()))
+			transitions.add(new SFAEpsilon<CharPred, Character>(t.from, t.to));
+
+		Collection<Integer> finalStates = trans.getFinalStates();
+
+		return SFA.MkSFA(transitions, trans.getInitialState(), finalStates, ba, false, false);
 	}
 	
 }

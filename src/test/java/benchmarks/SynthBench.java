@@ -16,7 +16,7 @@ import theory.intervals.UnaryCharIntervalSolver;
 import utilities.Pair;
 import utilities.SFAprovider;
 
-public class FlashFillBench {
+public class SynthBench {
 	
 	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	
@@ -105,7 +105,7 @@ public class FlashFillBench {
 	
 	
 	/* extr_odds */
-	@Test
+	
 	public void extrOdds() throws TimeoutException {
 		String UNCLEANED_DATA_REGEX = "([(][)]|[0-9][0-9]*)*(([(][0-9][0-9]*/[0-9][0-9]*[)])([(][)]|[0-9][0-9]*)*)*";
 		SFA<CharPred, Character> UNCLEANED_DATA = (new SFAprovider(UNCLEANED_DATA_REGEX, ba)).getSFA().removeEpsilonMoves(ba).determinize(ba);
@@ -344,6 +344,24 @@ public class FlashFillBench {
 		examples.add(new Pair<String, String>("a. b", "a, b"));
 		
 		ConstraintsTestSymbolic.customConstraintsTest(DOT, COMMA, 1, 1, fraction, examples, null, false);
+	}
+	
+	@Test
+	public void formatPhoneNumber() throws TimeoutException {
+		String NUMBER_REGEX = "[0-9]{10}";
+		SFA<CharPred, Character> NUMBER = (new SFAprovider(NUMBER_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(NUMBER.accepts(lOfS("6757925603"), ba));
+		
+		String NUMBER_FORMATTED_REGEX = "[0-9]{3}[-][0-9]{3}[-][0-9]{4}";
+		SFA<CharPred, Character> NUMBER_FORMATTED = (new SFAprovider(NUMBER_FORMATTED_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(NUMBER_FORMATTED.accepts(lOfS("675-792-5603"), ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("6757925603", "675-792-5603"));
+		
+		ConstraintsTestSymbolic.customConstraintsTest(NUMBER, NUMBER_FORMATTED, 4, 2, fraction, examples, null, false);
 	}
 	
 	// -------------------------

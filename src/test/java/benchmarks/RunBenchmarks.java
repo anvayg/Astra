@@ -119,7 +119,8 @@ public class RunBenchmarks {
 		SFA<CharPred, Character> target = (new SFAprovider(targetRegex, ba)).getSFA().removeEpsilonMoves(ba);
 		if (!target.isDeterministic(ba)) target = target.determinize(ba);
 		
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null);
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null);
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
 		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
 		String witness = result.third;

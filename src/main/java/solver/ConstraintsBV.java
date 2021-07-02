@@ -89,14 +89,14 @@ public class ConstraintsBV {
 	}
 	
 	/* Method for mkConstraints */
-	public SFT<CharPred, CharFunc, Character> mkConstraints(int numStates, int bound, int[] fraction, 
+	public Pair<SFT<CharPred, CharFunc, Character>, Long> mkConstraints(int numStates, int bound, int[] fraction, 
 			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, String smtFile, boolean debug) throws TimeoutException { 	// take out debug later
 		return mkConstraints(ctx, ctx.mkSolver(), alphabetMap, source, target, numStates, bound, fraction, ioExamples, template, solution, ba, smtFile, debug);
 	}
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static SFT<CharPred, CharFunc, Character> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
+	public static Pair<SFT<CharPred, CharFunc, Character>, Long> mkConstraints(Context ctx, Solver solver, HashMap<Character, Integer> alphabetMap, 
 			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int length, int[] fraction, 
 			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, 
 			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba, String smtFile, boolean debug) throws TimeoutException {
@@ -674,9 +674,10 @@ public class ConstraintsBV {
 		Set<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new HashSet<SFTMove<CharPred, CharFunc, Character>>();
 		
 		long startTime = System.nanoTime();
+		long stopTime = 0; 	// gets set later
 		if (solver.check() == Status.SATISFIABLE) {
 			Model m = solver.getModel();
-			long stopTime = System.nanoTime();
+			stopTime = System.nanoTime();
 			System.out.println((stopTime - startTime));
 			System.out.println((stopTime - startTime) / 1000000000);
 			
@@ -809,15 +810,13 @@ public class ConstraintsBV {
 			}
 			
 		} else {
-			long stopTime = System.nanoTime();
-			System.out.println((stopTime - startTime));
-			System.out.println((stopTime - startTime) / 1000000000);
+			stopTime = System.nanoTime();
 		}
 		
 		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();
 		SFT<CharPred, CharFunc, Character> mySFT = SFT.MkSFT(transitionsFT, 0, finStates, ba);
 		
-		return mySFT;
+		return new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT, ((stopTime - startTime) / 1000000));
 	}
 
 }

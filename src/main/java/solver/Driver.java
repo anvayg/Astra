@@ -83,7 +83,7 @@ public class Driver {
 		
 		while (true) {
 			/* Call solver */
-			SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputLength, fraction, examplesFinite, null, null, null, false);
+			SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputLength, fraction, examplesFinite, null, null, null, false).first;
 			
 			if (mySFT.getTransitions().size() == 0) { // if UNSAT
 				if (numStates < sourceFinite.stateCount()) {
@@ -136,9 +136,11 @@ public class Driver {
 		ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
 		long startTime = System.nanoTime();
 		if (template != null) {
-			mySFT = c.mkConstraints(template.stateCount(), outputBound, fraction, examplesFinite, sourceFinite, null, null, false);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(template.stateCount(), outputBound, fraction, examplesFinite, sourceFinite, null, null, false);
+			mySFT = res.first;
 		} else {
-			mySFT = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, null, null, false);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, null, null, false);
+			mySFT = res.first;
 		}
 		long stopTime = System.nanoTime();
 		long time1 = stopTime - startTime;
@@ -146,8 +148,9 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			mySFT2 = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, mySFT, null, false);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, mySFT, null, false);
 			stopTime = System.nanoTime();
+			mySFT2 = res.first;
 		}
 		long time2 = stopTime - startTime;
 		
@@ -168,13 +171,16 @@ public class Driver {
 			// Check equality of expanded transducers
 			if (!SFT.decide1equality(mySFTrestricted, mySFT2restricted, ba)) {
 				System.out.println("Not equiv");
-				List<Character> witnessChars = SFT.witness1disequality(mySFTrestricted, mySFT2restricted, ba);
-				
-				StringBuilder sb = new StringBuilder();
-				for (Character ch : witnessChars) {
-					sb.append(ch);
+				try {
+					List<Character> witnessChars = SFT.witness1disequality(mySFTrestricted, mySFT2restricted, ba);
+					StringBuilder sb = new StringBuilder();
+					for (Character ch : witnessChars) {
+						sb.append(ch);
+					}
+					witness = sb.toString();
+				} catch(Exception e) {
+					// TODO
 				}
-				witness = sb.toString();
 			}
 		}
 		
