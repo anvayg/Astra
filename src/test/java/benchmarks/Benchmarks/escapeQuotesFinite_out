@@ -1,0 +1,90 @@
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 0
+SFT1 solving time: 113
+SFT2 solving time: 59
+First SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+2 [label="2", peripheries = 2];
+0 -> 0 [label="[a]/
+x -> "];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\"]/
+x -> "];
+1 -> 2 [label="[\\]/
+x -> "];
+1 -> 0 [label="[\"]/
+x -> x + 63"];
+1 -> 2 [label="[a]/
+x -> "];
+2 -> 2 [label="[a]/
+x -> "];
+2 -> 0 [label="[\"]/
+x -> x + 63"];
+2 -> 1 [label="[\\]/
+x -> "];
+}
+Synthesis time: 239
+Second SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 5x + 0"];
+0 -> 0 [label="[a]/
+x -> "];
+0 -> 0 [label="[\"]/
+x -> "];
+1 -> 0 [label="[a]/
+x -> "];
+1 -> 0 [label="[\"]/
+x -> "];
+1 -> 0 [label="[\\]/
+x -> x + 5x + 0"];
+}
+Synthesis time: 79
+Input on which SFTs differ: \
+Output1: \
+Output2: a\
+
+
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 263
+SFT2 solving time: 236
+First SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[a]/
+x -> x + 0"];
+0 -> 0 [label="[\"]/
+x -> x + 58x + 0"];
+1 -> 0 [label="[\"]/
+x -> x + 0"];
+1 -> 0 [label="[a]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 781
+Equivalent results
+
