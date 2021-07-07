@@ -141,6 +141,13 @@ public class SFTOperations {
 		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
 	}
 	
+	/* Remove final states */
+	public static SFT<CharPred, CharFunc, Character> removeFinalStates(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
+		
+		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
+	}
+	
 	/* Variant of getDomain that does not normalize */
 	public static SFA<CharPred, Character> getDomain(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
 		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();

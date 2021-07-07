@@ -185,6 +185,28 @@ public class SFAOperations {
 	/* 'Unnormalizes' two SFAs using the given minterms */
 	public static Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalize(SFA<CharPred, Character> aut1, 
 			SFA<CharPred, Character> aut2, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		if (minterms == null) {
+			// Get all predicates
+			ArrayList<CharPred> predicates1 = new ArrayList<CharPred>(); 
+			ArrayList<CharPred> predicates2 = new ArrayList<CharPred>(); 
+			 
+			for (Integer state : aut1.getStates()) {
+				for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+					predicates1.add(transition.guard);
+				}
+			}
+			
+			for (Integer state : aut2.getStates()) {
+				for (SFAInputMove<CharPred, Character> transition : aut2.getInputMovesFrom(state)) {
+					predicates2.add(transition.guard);
+				}
+			}
+			
+			predicates1.addAll(predicates2);
+			
+			minterms = ba.GetMinterms(predicates1);
+		}
+		
 		
 		// Make new transitions
 		Collection<SFAMove<CharPred, Character>> transitions1 = new ArrayList<SFAMove<CharPred, Character>>();

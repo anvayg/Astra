@@ -208,7 +208,7 @@ public class ConstraintsTest {
 			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug);
 		} else if (encoding.equals("bitvec")) {
 			ConstraintsBV c = new ConstraintsBV(ctx, source, targetTotal, alphabetMap, ba);
-			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug);
+			mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug).first;
 		} else {
 			throw new IllegalArgumentException("Invalid encoding string");
 		}
