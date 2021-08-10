@@ -57,6 +57,24 @@ public class SFTOperations {
 		return outputStr.toString();
 	}
 	
+	/* 
+	 * Based on SFT.OutputOn but returns all outputs of a non-det transducer
+	 * */
+	public static List<String> getAllOutputs(SFT<CharPred, CharFunc, Character> trans, String inputStr, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+		
+		List<List<Character>> outputs = new ArrayList<List<Character>>();
+		
+		// SFT.backtrack(outputs, new ArrayList<Character>(), trans, trans.getInitialState(), lOfS(inputStr), 0, ba);
+		
+		List<String> outputStrings = new ArrayList<String>();
+		for (List<Character> l : outputs) {
+			outputStrings.add(sOfL(l));
+		}
+		
+		return outputStrings;
+	}
+	
 	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut, 
 			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		// Get all predicates
@@ -163,4 +181,22 @@ public class SFTOperations {
 		return SFA.MkSFA(transitions, trans.getInitialState(), finalStates, ba, false, false);
 	}
 	
+	/* String from List of Chars */
+	public static String sOfL(List<Character> l) {
+		StringBuffer str = new StringBuffer();
+		
+		for (Character c : l) {
+			str.append(c);
+		}
+		
+		return str.toString();
+	}
+	
+	private static List<Character> lOfS(String s) {
+		List<Character> l = new ArrayList<Character>();
+		char[] ca = s.toCharArray();
+		for (int i = 0; i < s.length(); i++)
+			l.add(ca[i]);
+		return l;
+	}
 }
