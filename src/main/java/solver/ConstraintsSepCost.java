@@ -10,9 +10,7 @@ import java.util.Set;
 
 import org.sat4j.specs.TimeoutException;
 
-import com.microsoft.z3.Constructor;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.DatatypeSort;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.IntNum;

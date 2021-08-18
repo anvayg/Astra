@@ -15,13 +15,15 @@ import automata.sfa.SFA;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
-import theory.BooleanAlgebra;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
 import theory.characters.CharPred;
-import transducers.sft.*;
+import transducers.sft.SFT;
+import transducers.sft.SFTEpsilon;
+import transducers.sft.SFTInputMove;
+import transducers.sft.SFTMove;
 import utilities.Pair;
 
 public class SFTOperations {

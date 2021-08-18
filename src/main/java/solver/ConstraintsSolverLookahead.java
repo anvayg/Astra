@@ -27,10 +27,10 @@ import com.microsoft.z3.Status;
 import com.microsoft.z3.Symbol;
 import com.microsoft.z3.TupleSort;
 
-import automata.SFAOperations;
 import automata.fsa.FSA;
 import automata.fsa.FSAMove;
 import automata.fst.FST;
+import automata.fst.FSTLookahead;
 import automata.fst.FSTMove;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
@@ -649,7 +649,7 @@ public class ConstraintsSolverLookahead {
 	
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public Pair<SFT<CharPred, CharFunc, Character>, Long> mkConstraints(String smtFile, boolean debug) throws TimeoutException {
+	public Pair<FSTLookahead<Character, Character>, Long> mkConstraints(String smtFile, boolean debug) throws TimeoutException {
 		/* Set params */
 		Params p = ctx.mkParams();
 		p.add("smt.relevancy", 0);
@@ -896,7 +896,7 @@ public class ConstraintsSolverLookahead {
 			e1.printStackTrace();
 		}
 		
-		return constructSFT(debug);
+		return constructFT(debug);
 	}
 	
 	
@@ -963,13 +963,55 @@ public class ConstraintsSolverLookahead {
 		}
 		
 		Collection<Integer> finalStates = new HashSet<Integer>();
-		FST<Pair<Character, Integer>, Character> lookaheadSFT = FST.MkFST(transitions, 0, finalStates);
-		return lookaheadSFT;
+		FST<Pair<Character, Integer>, Character> lookaheadFT = FST.MkFST(transitions, 0, finalStates);
+		return lookaheadFT;
 	}
 	
-	public Pair<SFT<CharPred, CharFunc, Character>, Long> constructSFT(boolean debug) throws TimeoutException {
+	
+	
+	public FST<Character, Character> mkNonDetFT(FST<Pair<Character, Integer>, Character> lookaheadFT, 
+			FSA<Character> lookaheadAut) {
+		Set<FSTMove<Character, Character>> transitions = 
+				new HashSet<FSTMove<Character, Character>>();
+		
+		for (Integer state : lookaheadFT.getStates()) {
+			for (FSTMove<Pair<Character, Integer>, Character> transition : lookaheadFT.getTransitionsFrom(state)) {
+				Integer from = transition.from;
+				Integer to = transition.to;
+				Integer lookaheadState = transition.input.second;
+				
+				Character input = transition.input.first;
+				List<Character> outputs = transition.outputs;
+				
+				Integer newFrom = (from * numLookaheadStates) + lookaheadState;
+				
+				List<Integer> toStates = lookaheadAut.inverseDeltaStates(lookaheadState, input);
+				for (Integer toState : toStates) {
+					Integer newTo = (to * numLookaheadStates) + toState;
+					transitions.add(new FSTMove<Character, Character>(newFrom, newTo, input, outputs));
+				}
+			}
+		}
+		
+		Collection<Integer> finalStates = new HashSet<Integer>();
+		Collection<Integer> initialStates = new HashSet<Integer>();
+		for (int i = 0; i < numLookaheadStates; i++) {
+			initialStates.add(i);
+		}
+		
+		FST<Character, Character> nonDetFT = FST.MkFST(transitions, 0, finalStates); // Fix Initial State
+		System.out.println(nonDetFT.toDotString());
+		nonDetFT = nonDetFT.mkOneInitialState(initialStates);
+		return nonDetFT;
+	}
+	
+	public Pair<FSTLookahead<Character, Character>, Long> constructFT(boolean debug) throws TimeoutException {
 		/* Reconstruct transducer */
 		Set<SFTMove<CharPred, CharFunc, Character>> transitionsFT = new HashSet<SFTMove<CharPred, CharFunc, Character>>();
+		
+		FSA<Character> lookaheadAut = null;
+		
+		FST<Pair<Character, Integer>, Character> lookaheadFT = null;
 		
 		long startTime = System.nanoTime();
 		long stopTime = 0; 	// gets set later
@@ -1086,92 +1128,20 @@ public class ConstraintsSolverLookahead {
 				/* values of e(i) */
 		    }
 			
-			/* Add transitions to FT */
-			if (template != null) {
-				/* Only add 'relevant' transitions */
-				for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
-					Integer stateFrom = transition.from;
-					Character move = transition.getWitness(ba);
-					Integer stateTo = transition.to;
-					
-					for (int q = 0; q < numLookaheadStates; q++) {
-						BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-						BitVecExpr qL = (BitVecNum) ctx.mkNumeral(q, BV);
-						BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
-
-						/* output_len */
-						Expr outputLenExpr = out_len.apply(q1, qL, a);
-						BitVecNum outputLenNum = (BitVecNum) m.evaluate(outputLenExpr, false);
-						int outputLen = outputLenNum.getInt();
-
-						/* get output */
-						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
-						for (int i = 0; i < outputLen; i++) {
-							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
-							Expr d1exp = d1.apply(q1, qL, a, index);
-							BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
-							int outMove = outMoveNum.getInt();
-							Character output = revAlphabetMap.get(outMove);
-							outputFunc.add(new CharConstant(output));
-						}
-
-						SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(stateFrom, stateTo, new CharPred(move), outputFunc);
-						transitionsFT.add(newTrans);
-					}
-				}
-				
-			} else {
-				for (int q1 = 0; q1 < numStates; q1++) {
-					for (int qL = 0; qL < numLookaheadStates; qL++) {
-					
-						for (int move : alphabetMap.values())  { 
-							Character input = revAlphabetMap.get(move);
-							BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BV);
-							BitVecExpr stateLookahead = (BitVecNum) ctx.mkNumeral(qL, BV);
-							BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV); 
-
-							/* get state to */
-							Expr d2exp = d2.apply(state, stateLookahead, a);
-							BitVecNum q2num = (BitVecNum) m.evaluate(d2exp, false);
-							int q2 = q2num.getInt();
-
-							/* output_len */
-							Expr outputLenExpr = out_len.apply(state, stateLookahead, a);
-							BitVecNum outputLenNum = (BitVecNum) m.evaluate(outputLenExpr, false);
-							int outputLen = outputLenNum.getInt();
-
-							/* get output */
-							List<CharFunc> outputFunc = new ArrayList<CharFunc>();
-							for (int i = 0; i < outputLen; i++) {
-								BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
-								Expr d1exp = d1.apply(state, stateLookahead, a, index);
-								BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
-								int outMove = outMoveNum.getInt();
-								Character output = revAlphabetMap.get(outMove);
-								outputFunc.add(new CharConstant(output));
-							}
-
-							SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(q1, q2, new CharPred(input), outputFunc);
-							transitionsFT.add(newTrans);
-						}
-					}
-				}
-			}
-			
-			FSA<Character> lookaheadAut = extractLookaheadAut(m);
+			lookaheadAut = extractLookaheadAut(m);
 			System.out.println(lookaheadAut.toDotString());
 			
-			FST<Pair<Character, Integer>, Character> lookaheadFT = extractFT(m);
+			lookaheadFT = extractFT(m);
 			System.out.println(lookaheadFT.toDotString());
 			
+			FST<Character, Character> lookaheadNonDetFT = mkNonDetFT(lookaheadFT, lookaheadAut);
+			System.out.println(lookaheadNonDetFT.toDotString());
 		} else {
 			stopTime = System.nanoTime();
 		}
 		
-		HashMap<Integer, Set<List<Character>>> finStates = new HashMap<Integer, Set<List<Character>>>();
-		SFT<CharPred, CharFunc, Character> mySFT = SFT.MkSFT(transitionsFT, 0, finStates, ba);
-		
-		return new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT, ((stopTime - startTime) / 1000000));
+		FSTLookahead res = new FSTLookahead(lookaheadFT, lookaheadAut);
+		return new Pair<FSTLookahead<Character, Character>, Long>(res, ((stopTime - startTime) / 1000000));
 	}
 
 }

@@ -1,13 +1,14 @@
 package automata.fsa;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
-import automata.Automaton;
 import automata.FAutomaton;
-import automata.Move;
 
 
 /**
@@ -69,6 +70,43 @@ public class FSA<P> extends FAutomaton<P> {
 		transitionCount++;
 	}
 	
+	public List<Integer> inverseDeltaStates(Integer state, P input) {
+		List<Integer> states = new ArrayList<Integer>();
+		
+		for (FSAMove<P> transition : getInputMovesTo(state)) {
+			if (transition.input == input) {
+				states.add(transition.from);
+			}
+		}
+		
+		return states;
+	}
+	
+	public Integer getSuccessorState(Integer state, P input) {
+		for (FSAMove<P> transition : getInputMovesFrom(state)) {
+			if (transition.input == input) {
+				return transition.to; 		// assumes disjoint transitions
+			}
+		}
+		
+		return -1; 	// no state found
+	}
+	
+	public List<Integer> getRunOn(List<P> inputs) {
+		List<Integer> run = new ArrayList<Integer>();
+		Collections.reverse(inputs);
+		
+		Integer state = getInitialState();
+		run.add(state);
+		for (P input : inputs) {
+			Integer nextState = this.getSuccessorState(state, input);
+			run.add(nextState);
+			state = nextState;
+		}
+		
+		return run;
+	}
+	
 	public String toDotString() {
 		StringBuilder sb = new StringBuilder();
 		Collection<Integer> finStates = getFinalStates();
@@ -99,6 +137,14 @@ public class FSA<P> extends FAutomaton<P> {
 
 	public Integer transitionCount() {
 		return transitionCount;
+	}
+	
+	public Collection<FSAMove<P>> getTransitionsFrom(Integer state) {
+		return getInputMovesFrom(state);
+	}
+	
+	public Collection<FSAMove<P>> getTransitionsTo(Integer state) {
+		return getInputMovesTo(state);
 	}
 
 	private Collection<FSAMove<P>> getInputMovesFrom(Integer state) {

@@ -141,14 +141,16 @@ public class Driver {
 		long solvingTime1 = 0;
 		long solvingTime2 = 0;
 		
-		ConstraintsBV c = new ConstraintsBV(ctx, sourceFinite, targetTotal, alphabetMap, ba);
+		ConstraintsSolver c = null;
 		long startTime = System.nanoTime();
 		if (template != null) {
-			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(template.stateCount(), outputBound, fraction, examplesFinite, sourceFinite, null, null, false);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, fraction, template, null, ba);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 			mySFT = res.first;
 			solvingTime1 = res.second;
 		} else {
-			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, null, null, false);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, fraction, null, null, ba);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 			mySFT = res.first;
 			solvingTime1 = res.second;
 		}
@@ -158,7 +160,8 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(numStates, outputBound, fraction, examplesFinite, null, mySFT, null, false);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, fraction, null, mySFT, ba);
+			Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
 			solvingTime2 = res.second;

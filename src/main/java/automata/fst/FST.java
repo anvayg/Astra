@@ -1,5 +1,6 @@
 package automata.fst;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,10 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import automata.Automaton;
 import automata.FAutomaton;
-import automata.Move;
-import automata.fsa.FSAMove;
 
 public class FST<P, S> extends FAutomaton<P> {
 	
@@ -69,6 +67,42 @@ public class FST<P, S> extends FAutomaton<P> {
 		transitionCount++;
 	}
 	
+	public FST<P, S> mkOneInitialState(Collection<Integer> initialStates) {
+		Set<FSTMove<P, S>> transitions = new HashSet<FSTMove<P, S>>();
+		Integer newState = this.maxStateId + 1;
+		
+		for (Integer state : getStates()) {
+			transitions.addAll(getTransitionsFrom(state));
+		}
+	
+		for (Integer state : initialStates) {
+			for (FSTMove<P, S> transition : getTransitionsFrom(state)) {
+				FSTMove<P, S> newTransition = 
+						new FSTMove<P, S>(newState, transition.to, transition.input, transition.outputs);
+				transitions.add(newTransition);
+			}
+		}
+		
+		return MkFST(transitions, newState, this.finalStates);
+	}
+
+	public List<S> outputOn(List<P> inputs) {
+		List<S> outputs = new ArrayList<S>();
+		
+		Integer state = this.getInitialState();
+		
+		for (P input : inputs) {
+			for (FSTMove<P, S> transition : getTransitionsFrom(state)) { 	// assumes determinism
+				if (transition.input == input) {
+					outputs.addAll(transition.outputs);
+					state = transition.to;
+				}
+			}
+		}
+		
+		return outputs;
+	}
+	
 	public String toDotString() {
 		StringBuilder sb = new StringBuilder();
 		Collection<Integer> finStates = getFinalStates();
@@ -93,7 +127,7 @@ public class FST<P, S> extends FAutomaton<P> {
 		return sb.toString();
 	}
 	
-	private Collection<FSTMove<P, S>> getTransitionsFrom(Integer state) {
+	public Collection<FSTMove<P, S>> getTransitionsFrom(Integer state) {
 		Collection<FSTMove<P, S>> trset = transitionsFrom.get(state);
 		if (trset == null) {
 			trset = new HashSet<FSTMove<P, S>>();
@@ -103,7 +137,7 @@ public class FST<P, S> extends FAutomaton<P> {
 		return trset;
 	}
 
-	private Collection<FSTMove<P, S>> getTransitionsTo(Integer state) {
+	public Collection<FSTMove<P, S>> getTransitionsTo(Integer state) {
 		Collection<FSTMove<P, S>> trset = transitionsTo.get(state);
 		if (trset == null) {
 			trset = new HashSet<FSTMove<P, S>>();
@@ -135,5 +169,5 @@ public class FST<P, S> extends FAutomaton<P> {
 	public Collection<Integer> getStates() {
 		return states;
 	}
-
+	
 }

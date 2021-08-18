@@ -11,11 +11,11 @@ import java.util.Set;
 
 import org.sat4j.specs.TimeoutException;
 
-import automata.sfa.*;
+import automata.sfa.SFA;
+import automata.sfa.SFAInputMove;
+import automata.sfa.SFAMove;
 import theory.BooleanAlgebra;
-import theory.characters.CharFunc;
 import theory.characters.CharPred;
-import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.Triple;
 
