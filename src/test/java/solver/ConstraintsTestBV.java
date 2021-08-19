@@ -13,13 +13,15 @@ import org.sat4j.specs.TimeoutException;
 
 import com.microsoft.z3.Context;
 
+import SFT.GetTag;
 import automata.SFAOperations;
 import automata.SFTOperations;
+import automata.fsa.FSA;
+import automata.fst.FST;
+import automata.fst.FSTLookahead;
 import automata.sfa.SFA;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
-import solver.Constraints;
-import solver.ConstraintsBV;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
@@ -111,25 +113,136 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		return mySFT;
 	}
 	
+	static SFT<CharPred, CharFunc, Character> customConstraintsTest2(Context ctx, SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, 
+			List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException {
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
+		
+		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
+		System.out.println(alphabetMap);
+		
+		// Make FAs total
+		SFA<CharPred, Character> sourceTotal =  SFAOperations.mkTotalFinite(source, alphabetSet, ba);
+		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
+		
+		// Changed: not making source DFA total
+		ConstraintsSolver c = new ConstraintsSolver(ctx, source, targetTotal, alphabetMap, numStates, outputBound, ioExamples, fraction, template, null, ba);
+		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(smtFile, debug).first;
+		
+		for (Pair<String, String> example : ioExamples) {
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+            assertTrue(exampleOutput.equals(example.second));
+        }
+		
+		return mySFT;
+	}
+	
+	static FST<Pair<Character, Integer>, Character> customLookaheadConstraintsTest(Context ctx, 
+			SFA<CharPred, Character> source, SFA<CharPred, Character> target, int numStates, int numLookaheadStates,
+			int outputBound, int[] fraction, List<Pair<String, String>> ioExamples, SFA<CharPred, Character> template, 
+			String smtFile, boolean debug) throws TimeoutException {
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(source, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(target, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
+		
+		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
+		System.out.println(alphabetMap);
+		
+		// Make FAs total
+		SFA<CharPred, Character> sourceTotal =  SFAOperations.mkTotalFinite(source, alphabetSet, ba);
+		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
+		
+		// Calling LookaheadSolver
+		ConstraintsSolverLookahead c = new ConstraintsSolverLookahead(ctx, source, targetTotal, alphabetMap, 
+				numStates, numLookaheadStates, outputBound, ioExamples, fraction, template, null, ba);
+		FSTLookahead<Character, Character> res = c.mkConstraints(smtFile, debug).first;
+		FST<Pair<Character, Integer>, Character> lookaheadFT = res.getTransducer();
+		FSA<Character> lookaheadAut = res.getAutomaton();
+		
+		System.out.println(lookaheadFT.toDotString());
+		
+		for (Pair<String, String> example : ioExamples) {
+        	List<Character> exampleOutput = res.outputOn(lOfS(example.first));
+        	System.out.println(exampleOutput + ", " + example.second);
+            assertTrue(exampleOutput.equals(lOfS(example.second)));
+        }
+		
+		return lookaheadFT;
+	}
+	
 	static void constraintsTest1(Context ctx) throws TimeoutException {
         int[] fraction = new int[] {1, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA01, mySFA03, 1, 2, fraction, examples, null, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest2(ctx, mySFA01, mySFA03, 1, 2, fraction, examples, null, null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
 	static void constraintsTest2(Context ctx) throws TimeoutException {
-        int[] fraction = new int[] {1, 1};
+        int[] fraction = new int[] {1, 2};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>(";", ";")); 
         examples.add(new Pair<String, String>("a;", "b;"));
         examples.add(new Pair<String, String>("b;", "b;"));
-        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA07, mySFA08, 2, 2, fraction, examples, null, null, false);
+        SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest2(ctx, mySFA07, mySFA08, 1, 2, fraction, examples, null, null, false);
         System.out.println(synthSFT.toDotString(ba));
 	}
 	
+	
+	static void constraintsTest3(Context ctx) throws TimeoutException {
+        int[] fraction = new int[] {1, 2};
+        
+        List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>(";", ";")); 
+        examples.add(new Pair<String, String>("a;", "b;"));
+        examples.add(new Pair<String, String>("b;", "b;"));
+        FST<Pair<Character, Integer>, Character> synthSFT = customLookaheadConstraintsTest(ctx, mySFA07, mySFA08, 1, 2, 2, fraction, examples, null, null, true);
+        System.out.println(synthSFT.toDotString());
+	}
+	
+	
+	static void getTags(Context ctx) throws TimeoutException {
+		SFT<CharPred, CharFunc, Character> GetTags = GetTag.MkGetTagsSFT();
+		System.out.println(GetTags.toDotString(ba));
+		
+		SFA<CharPred, Character> source = GetTags.getDomain(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(source.toDotString(ba));
+		
+		assertTrue(source.accepts(lOfS("<<s<"), ba));
+		assertTrue(source.accepts(lOfS("<<s<s>"), ba));
+		assertTrue(source.accepts(lOfS("<<s<st"), ba));
+		System.out.println(source.toDotString(ba));
+	
+		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+		System.out.println(target.toDotString(ba));
+		
+		int[] fraction = new int[] {2, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("<<s<", ""));
+		examples.add(new Pair<String, String>("<st", ""));
+		examples.add(new Pair<String, String>("<s>", "<s>"));
+		examples.add(new Pair<String, String>("<st<s>", "<s>"));
+		SFT<CharPred, CharFunc, Character> synthSFT = 
+				ConstraintsTestSymbolic.customLookaheadConstraintsTest(source, target, 2, 2, 2, fraction, examples, null, "getTags.smt2", true);
+				// ConstraintsTestSymbolic.customConstraintsTest(source, target, 4, 2, fraction, examples, source, true);
+		
+	}
+	
+	private static List<Character> lOfS(String s) {
+		List<Character> l = new ArrayList<Character>();
+		char[] ca = s.toCharArray();
+		for (int i = 0; i < s.length(); i++)
+			l.add(ca[i]);
+		return l;
+	}
 	
 	public static void main(String[] args) throws TimeoutException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
@@ -138,7 +251,9 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         
         mkSFAs();
         
-        constraintsTest1(ctx);
+        // constraintsTest1(ctx);
         // constraintsTest2(ctx);
+        constraintsTest3(ctx);
+        // getTags(ctx);
 	}
 }

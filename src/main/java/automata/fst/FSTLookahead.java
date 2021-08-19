@@ -49,7 +49,7 @@ public class FSTLookahead<P, S> extends FAutomaton<P> {
 			Integer lookaheadState = -1;
 			if (i < inputs.size() - 1) {
 				lookaheadState = runOnAut.get(i + 1);
-			} 
+			}
 			
 			// take correct transition
 			for (FSTMove<Pair<P, Integer>, S> transition : fst.getTransitionsFrom(state)) {
@@ -57,6 +57,7 @@ public class FSTLookahead<P, S> extends FAutomaton<P> {
 					if (transition.input.second == lookaheadState || lookaheadState == -1) {
 						outputs.addAll(transition.outputs);
 						state = transition.to;
+						break;
 					}
 				}
 			}

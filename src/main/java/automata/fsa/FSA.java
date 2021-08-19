@@ -93,17 +93,18 @@ public class FSA<P> extends FAutomaton<P> {
 	}
 	
 	public List<Integer> getRunOn(List<P> inputs) {
+		List<P> inputsCopy = new ArrayList<P>(inputs);
 		List<Integer> run = new ArrayList<Integer>();
-		Collections.reverse(inputs);
+		Collections.reverse(inputsCopy);
 		
 		Integer state = getInitialState();
-		run.add(state);
-		for (P input : inputs) {
+		for (P input : inputsCopy) {
 			Integer nextState = this.getSuccessorState(state, input);
 			run.add(nextState);
 			state = nextState;
 		}
 		
+		Collections.reverse(run);
 		return run;
 	}
 	

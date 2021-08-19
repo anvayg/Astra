@@ -18,8 +18,6 @@ import automata.SFTOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
-import solver.Constraints;
-import solver.ConstraintsBV;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;

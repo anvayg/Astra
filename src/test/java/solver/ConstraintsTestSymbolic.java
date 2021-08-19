@@ -16,11 +16,13 @@ import com.microsoft.z3.Context;
 
 import automata.SFAOperations;
 import automata.SFTOperations;
+import automata.fsa.FSA;
+import automata.fst.FST;
+import automata.fst.FSTLookahead;
+import automata.fst.FSTOperations;
 import automata.sfa.SFA;
 import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
-import solver.Constraints;
-import solver.ConstraintsBV;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
@@ -226,6 +228,68 @@ public class ConstraintsTestSymbolic {
         	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first, ba);
         	System.out.println(exampleOutput);
         	assertTrue(exampleOutput.equals(example.second));
+        }
+		
+		System.out.println("Done");
+		return mySFTexpanded;
+	}
+	
+	public static SFT<CharPred, CharFunc, Character> customLookaheadConstraintsTest(SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, int numStates, int numLookaheadStates,
+			int outputBound, int[] fraction, List<Pair<String, String>> ioExamples, 
+			SFA<CharPred, Character> template, String smtFile, boolean debug) throws TimeoutException {
+		HashMap<String, String> cfg = new HashMap<String, String>();
+        cfg.put("model", "true");
+        Context ctx = new Context(cfg);
+		
+		// Make finite automata out of source and target
+		Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
+				SFA.MkFiniteSFA(source, target, ba);
+		
+		System.out.println(source.toDotString(ba));
+		System.out.println(target.toDotString(ba));
+		SFA<CharPred, Character> sourceFinite = triple.first;
+		SFA<CharPred, Character> targetFinite = triple.second;
+		System.out.println(sourceFinite.toDotString(ba));
+		System.out.println(targetFinite.toDotString(ba));
+		
+		Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = triple.third;
+		
+		List<Pair<String, String>> examplesFinite = finitizeExamples(ioExamples, idToMinterm);
+		for (Pair<String, String> example : examplesFinite) {
+			System.out.println(example);
+		}
+		
+		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(sourceFinite, ba);
+		Set<Character> targetAlphabetSet = SFAOperations.alphabetSet(targetFinite, ba);
+		Set<Character> alphabetSet = new HashSet<Character>();
+		alphabetSet.addAll(sourceAlphabetSet);
+		alphabetSet.addAll(targetAlphabetSet);
+		
+		HashMap<Character, Integer> alphabetMap = SFAOperations.mkAlphabetMap(alphabetSet);
+		
+		// Make target FA total
+		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(targetFinite, alphabetSet, ba);
+		
+		FSTLookahead<Character, Character> mySFT = null;
+		ConstraintsSolverLookahead c = new ConstraintsSolverLookahead(ctx, sourceFinite, targetTotal, alphabetMap, 
+				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, null, ba);
+		mySFT = c.mkConstraints(smtFile, debug).first;
+		FST<Pair<Character, Integer>, Character> lookaheadFT = mySFT.getTransducer();
+		FSA<Character> lookaheadAut = mySFT.getAutomaton();
+		System.out.println(lookaheadFT.toDotString());
+		
+		// Make non-det FT
+		FST<Character, Character> nonDetFT = c.mkNonDetFT(lookaheadFT, lookaheadAut);
+		
+		// Call minterm expansion
+		SFT<CharPred, CharFunc, Character> mySFTexpanded = FSTOperations.mintermExpansion(nonDetFT, triple.third, ba);
+		System.out.println(mySFTexpanded.toDotString(ba));
+		
+		for (Pair<String, String> example : ioExamples) {
+        	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first, ba);
+        	System.out.println(exampleOutput);
+        	// assertTrue(exampleOutput.equals(example.second));
         }
 		
 		System.out.println("Done");
