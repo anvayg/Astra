@@ -9,8 +9,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 
 import com.microsoft.z3.BitVecExpr;
@@ -27,6 +29,7 @@ import com.microsoft.z3.Status;
 import com.microsoft.z3.Symbol;
 import com.microsoft.z3.TupleSort;
 
+import automata.SFAOperations;
 import automata.fsa.FSA;
 import automata.fsa.FSAMove;
 import automata.fst.FST;
@@ -89,14 +92,18 @@ public class ConstraintsSolverLookahead {
 	FuncDecl[] eFuncs;
 	FuncDecl[] rFuncs;
 	
+	/* delta of lookaheadAut */
 	FuncDecl<BitVecSort> dL;
+	
+	Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterms;
 	
 	
 	/* Constructor */
 	public ConstraintsSolverLookahead(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			HashMap<Character, Integer> alphabetMap, int numStates, int numLookaheadStates, int outputBound, 
 			List<Pair<String, String>> ioExamples, int[] distance, SFA<CharPred, Character> template, 
-			SFT<CharPred, CharFunc, Character> solution, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+			SFT<CharPred, CharFunc, Character> solution, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.solver = ctx.mkSolver();
 		this.source = source;
@@ -111,6 +118,7 @@ public class ConstraintsSolverLookahead {
 		this.solution = solution;
 		this.alphabetMap = alphabetMap;
 		this.revAlphabetMap = reverseMap(alphabetMap);
+		this.idToMinterms = minterms;
 		this.ba = ba;
 	}
 	
@@ -468,8 +476,8 @@ public class ConstraintsSolverLookahead {
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
 			/* verify example */
-			// if (SFAOperations.getStateInFA(source, source.getInitialState(), ioExample.first, ba) == -1) throw new IllegalArgumentException("Illegal example for source: " + ioExample.first);
-			// if (SFAOperations.getStateInFA(target, target.getInitialState(), ioExample.second, ba) == -1) throw new IllegalArgumentException("Illegal example for target: " + ioExample.second);
+			if (SFAOperations.getStateInFA(source, source.getInitialState(), ioExample.first, ba) == -1) throw new IllegalArgumentException("Illegal example for source: " + ioExample.first);
+			if (SFAOperations.getStateInFA(target, target.getInitialState(), ioExample.second, ba) == -1) throw new IllegalArgumentException("Illegal example for target: " + ioExample.second);
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
@@ -827,6 +835,57 @@ public class ConstraintsSolverLookahead {
 		encodeExamples();
 		
 		
+		/* Put constraints on 'incompatible' minterms */
+		if (idToMinterms != null) {
+			/* Process alphabet */
+			Set<Character> singleChars = new HashSet<Character>();
+			Set<Character> multipleChars = new HashSet<Character>();
+			
+			for (Character a : alphabet) {
+				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms);
+				if (minterm.intervals.size() == 1) {
+					ImmutablePair<Character, Character> interval = minterm.intervals.get(0);
+					if (interval.right - interval.left == 0) {
+						singleChars.add(a);
+					} else {
+						multipleChars.add(a);
+					}
+				} else {
+					multipleChars.add(a);
+				}
+			}
+			
+			System.out.println(singleChars);
+			System.out.println(multipleChars);
+			
+			/* Single-char minterm cannot output multiple-char minterm */
+			for (int i = 0; i < numStates; i++) {	// q 
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+				
+				for (int j = 0; j < numLookaheadStates; j++) {
+					BitVecExpr qL = (BitVecNum) ctx.mkNumeral(j, BV);
+				
+					for (Character move : singleChars)  {
+						BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+						
+						for (int l = 0; l < outputBound; l++) {
+							BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+							Expr d1exp = d1.apply(q, qL, a, index);
+							
+							for (Character out : multipleChars) {
+								System.out.println(i + ", " + j + ", " + move + ", " + l + " not " + out);
+								BitVecExpr b = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+								solver.add(ctx.mkNot(ctx.mkEq(d1exp, b)));
+							}
+						}
+						
+					}
+				}
+			}
+			
+		}
+		
+		
 		/* Use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
 		if (template != null) {
 			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
@@ -986,8 +1045,15 @@ public class ConstraintsSolverLookahead {
 				Integer newFrom = (from * numLookaheadStates) + lookaheadState;
 				
 				List<Integer> toStates = lookaheadAut.inverseDeltaStates(lookaheadState, input);
+				if (input != '<' && input != '>') {
+					System.out.println(input + " " + lookaheadState + " " + toStates);
+				}
 				for (Integer toState : toStates) {
 					Integer newTo = (to * numLookaheadStates) + toState;
+					if (input != '<' && input != '>') {
+						System.out.print(transition.toDotString());
+						System.out.println(newFrom + " " + input + " " + outputs + " " + newTo);
+					}
 					transitions.add(new FSTMove<Character, Character>(newFrom, newTo, input, outputs));
 				}
 			}
