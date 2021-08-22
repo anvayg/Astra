@@ -67,7 +67,7 @@ public class SFTOperations {
 		
 		List<List<Character>> outputs = new ArrayList<List<Character>>();
 		
-		// SFT.backtrack(outputs, new ArrayList<Character>(), trans, trans.getInitialState(), lOfS(inputStr), 0, ba);
+		backtrack(outputs, new ArrayList<Character>(), trans, trans.getInitialState(), lOfS(inputStr), 0, ba);
 		
 		List<String> outputStrings = new ArrayList<String>();
 		for (List<Character> l : outputs) {
@@ -75,6 +75,43 @@ public class SFTOperations {
 		}
 		
 		return outputStrings;
+	}
+	
+	private static <P, F, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
+			Integer currentState, List<S> input, int position,
+			BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
+
+		if (position > input.size())
+			return;
+		else if (position == input.size()) {
+			if (sft.isFinalState(currentState)) {
+				if (sft.getFinalStatesAndTails().get(currentState).size() == 0) {
+					outputs.add(new ArrayList<S>(tempList));
+				} else {
+					for (List<S> tail: sft.getFinalStatesAndTails().get(currentState)) {
+						List<S> finalResult = new ArrayList<S>(tempList);
+						finalResult.addAll(tail);
+						outputs.add(new ArrayList<S>(finalResult));
+					}
+				}
+			}
+			return;
+		} else {
+			Collection<SFTInputMove<P, F, S>> transitions = sft.getInputMovesFrom(currentState);
+			boolean canMove = false;
+			for (SFTInputMove<P, F, S> transition: transitions) {
+				if (ba.HasModel(transition.guard, input.get(position))) {
+					for (F outputFunc: transition.outputFunctions)
+						tempList.add(ba.MkSubstFuncConst(outputFunc, input.get(position)));
+					backtrack(outputs, tempList, sft, transition.to, input, position + 1, ba);
+					for (int i = 0; i < transition.outputFunctions.size(); i++)
+						tempList.remove(tempList.size() - 1);
+					canMove = true;
+				}
+			}
+			if (!canMove)
+				return;
+		}
 	}
 	
 	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut, 

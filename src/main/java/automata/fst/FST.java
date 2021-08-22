@@ -146,6 +146,16 @@ public class FST<P, S> extends FAutomaton<P> {
 		}
 		return trset;
 	}
+	
+	public Collection<FSTMove<P, S>> getTransitionsFrom(Collection<Integer> states) {
+		Collection<FSTMove<P, S>> trset = new HashSet<FSTMove<P, S>>();
+		
+		for (Integer state : states) {
+			trset.addAll(transitionsFrom.get(state));
+		}
+		
+		return trset;
+	}
 
 	public Integer stateCount() {
 		return states.size();

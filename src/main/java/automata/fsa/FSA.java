@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import automata.FAutomaton;
+import automata.fst.FSTMove;
 
 
 /**
@@ -165,6 +166,16 @@ public class FSA<P> extends FAutomaton<P> {
 			inputMovesTo.put(state, trset);
 			return trset;
 		}
+		return trset;
+	}
+	
+	public Collection<FSAMove<P>> getTransitionsFrom(Collection<Integer> states) {
+		Collection<FSAMove<P>> trset = new HashSet<FSAMove<P>>();
+		
+		for (Integer state : states) {
+			trset.addAll(this.getTransitionsFrom(state));
+		}
+		
 		return trset;
 	}
 	
