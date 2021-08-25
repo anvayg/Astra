@@ -114,6 +114,18 @@ public class SFTOperations {
 		}
 	}
 	
+	public static List<CharPred> getPreds(SFT<CharPred, CharFunc, Character> aut) {
+		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 
+
+		for (Integer state : aut.getStates()) {
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : aut.getInputMovesFrom(state)) {
+				predicates.add(transition.guard);
+			}
+		}
+		
+		return predicates;
+	}
+	
 	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut, 
 			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		// Get all predicates

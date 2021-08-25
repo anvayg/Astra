@@ -165,6 +165,37 @@ public class SFAOperations {
 		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
 	
+	public static List<CharPred> getPreds(SFA<CharPred, Character> aut) {
+		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 
+
+		for (Integer state : aut.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut.getInputMovesFrom(state)) {
+				predicates.add(transition.guard);
+			}
+		}
+		
+		return predicates;
+	}
+	
+	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(List<SFA<CharPred, Character>> auts, 
+			BooleanAlgebra<CharPred, Character> ba) {
+		// Get all predicates
+		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 
+
+		for (SFA<CharPred, Character> aut : auts) {
+			for (Integer state : aut.getStates()) {
+				for (SFAInputMove<CharPred, Character> transition : aut.getInputMovesFrom(state)) {
+					predicates.add(transition.guard);
+				}
+			}
+		}
+		
+		// Get minterms
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predicates);
+		
+		return minterms;
+	}
+	
 	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFA<CharPred, Character> aut, 
 			BooleanAlgebra<CharPred, Character> ba) {
 		// Get all predicates

@@ -9,8 +9,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 
 import com.microsoft.z3.BitVecExpr;
@@ -85,12 +87,14 @@ public class ConstraintsSolver {
 	
 	FuncDecl<BitVecSort> dL;
 	
+	Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterms;
+	
 	
 	/* Constructor */
 	public ConstraintsSolver(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			HashMap<Character, Integer> alphabetMap, int numStates, int outputBound, List<Pair<String, String>> ioExamples, 
 			int[] distance, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, 
-			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.solver = ctx.mkSolver();
 		this.source = source;
@@ -103,6 +107,7 @@ public class ConstraintsSolver {
 		this.template = template;
 		this.solution = solution;
 		this.alphabetMap = alphabetMap;
+		this.idToMinterms = minterms;
 		this.ba = ba;
 	}
 	
@@ -476,7 +481,7 @@ public class ConstraintsSolver {
 					Expr outLenExpr = out_len.apply(q, a);
 						
 					/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
-					Expr qRPrime = dR.apply(qR, a);
+					// Expr qRPrime = dR.apply(qR, a);
 					
 					
 					/* make variable q' = d2(q, a) */
@@ -581,6 +586,11 @@ public class ConstraintsSolver {
 		p.add("smt.bv.eq_axioms", false);
 		p.add("smt.phase_caching_on", 80000);
 		solver.setParameters(p);
+		
+		/* Ensures numStates is correct */
+		if (template != null) {
+			this.numStates = template.stateCount();
+		}
 		
 		/* bit-vec and bool sorts */
 		BV = ctx.mkBitVecSort(8);
@@ -713,9 +723,9 @@ public class ConstraintsSolver {
 		this.first = pair.getFieldDecls()[0];	// projections
 		this.second = pair.getFieldDecls()[1];
 		
-		
+
 		/* Input-Output Types Constraints */
-		// encodeTypes();
+		encodeTypes();
 		
 	
 		/* Input-Output Distance Constraints */
@@ -724,6 +734,48 @@ public class ConstraintsSolver {
 		
 		/* Input-Output Example Constraints */
 		encodeExamples();
+		
+		
+		/* Put constraints on 'incompatible' minterms */
+		if (idToMinterms != null) {
+			/* Process alphabet */
+			Set<Character> singleChars = new HashSet<Character>();
+			Set<Character> multipleChars = new HashSet<Character>();
+			
+			for (Character a : alphabet) {
+				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms);
+				if (minterm.intervals.size() == 1) {
+					ImmutablePair<Character, Character> interval = minterm.intervals.get(0);
+					if (interval.right - interval.left == 0) {
+						singleChars.add(a);
+					} else {
+						multipleChars.add(a);
+					}
+				} else {
+					multipleChars.add(a);
+				}
+			}
+			
+			/* Single-char minterm cannot output multiple-char minterm */
+			for (int i = 0; i < numStates; i++) {	// q 
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+				
+				for (Character move : singleChars)  {
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+
+					for (int l = 0; l < outputBound; l++) {
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+						Expr d1exp = d1.apply(q, a, index);
+
+						for (Character out : multipleChars) {
+							BitVecExpr b = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+							solver.add(ctx.mkNot(ctx.mkEq(d1exp, b)));
+						}
+					}
+				}
+			}
+			
+		}
 		
 		
 		/* Use the d2 relation (the successor states) of the template, if one is provided, and enforce it */

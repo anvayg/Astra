@@ -58,7 +58,7 @@ public class ConstraintsSolverLookahead {
 	int[] distance; 	// Change later to allow different distances
 	List<Pair<String, String>> ioExamples;
 	SFA<CharPred, Character> template;
-	SFT<CharPred, CharFunc, Character> solution;
+	FSTLookahead<Character, Character> solution;
 	Set<Character> alphabet;
 	HashMap<Character, Integer> alphabetMap;
 	HashMap<Integer, Character> revAlphabetMap;
@@ -102,7 +102,7 @@ public class ConstraintsSolverLookahead {
 	public ConstraintsSolverLookahead(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			HashMap<Character, Integer> alphabetMap, int numStates, int numLookaheadStates, int outputBound, 
 			List<Pair<String, String>> ioExamples, int[] distance, SFA<CharPred, Character> template, 
-			SFT<CharPred, CharFunc, Character> solution, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, 
+			FSTLookahead<Character, Character> solution, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, 
 			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.solver = ctx.mkSolver();
@@ -855,9 +855,6 @@ public class ConstraintsSolverLookahead {
 				}
 			}
 			
-			System.out.println(singleChars);
-			System.out.println(multipleChars);
-			
 			/* Single-char minterm cannot output multiple-char minterm */
 			for (int i = 0; i < numStates; i++) {	// q 
 				BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
@@ -873,7 +870,6 @@ public class ConstraintsSolverLookahead {
 							Expr d1exp = d1.apply(q, qL, a, index);
 							
 							for (Character out : multipleChars) {
-								System.out.println(i + ", " + j + ", " + move + ", " + l + " not " + out);
 								BitVecExpr b = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
 								solver.add(ctx.mkNot(ctx.mkEq(d1exp, b)));
 							}
@@ -903,39 +899,56 @@ public class ConstraintsSolverLookahead {
 		
 		/* If previous solution provided, construct satisfying assignment and negate it */
 		if (solution != null) {
+			System.out.println("Solution constraints");
+			FST<Pair<Character, Integer>, Character> lookaheadFT = solution.getTransducer();
+			FSA<Character> lookaheadAut = solution.getAutomaton();
+			
 			Expr negModel = ctx.mkTrue();
-			Collection<Integer> states = solution.getStates();
-			for (SFTInputMove<CharPred, CharFunc, Character> transition : solution.getInputMovesFrom(states)) {
+			Collection<Integer> states = lookaheadFT.getStates();
+			for (FSTMove<Pair<Character, Integer>, Character> transition : lookaheadFT.getTransitionsFrom(states)) {
 				Integer stateFrom = transition.from;
-				Character move = transition.getWitness(ba);
+				Character input = transition.input.first;
+				Integer lookaheadState = transition.input.second;
 				Integer stateTo = transition.to;
-				List<CharFunc> outputFunc = transition.outputFunctions;
+				List<Character> outputs = transition.outputs;
 				
 				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qL = (BitVecNum) ctx.mkNumeral(lookaheadState, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
 				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
-				BitVecExpr outputLen = (BitVecNum) ctx.mkNumeral(outputFunc.size(), BV);
+				BitVecExpr outputLen = (BitVecNum) ctx.mkNumeral(outputs.size(), BV);
 				
 				/* d2exp */
-				Expr d2exp = d2.apply(q, a);
+				Expr d2exp = d2.apply(q, qL, a);
 				negModel = ctx.mkAnd(negModel, ctx.mkEq(d2exp, qPrime));
 				
 				/* outputLenExpr */
-				Expr outputLenExpr = out_len.apply(q, a);
+				Expr outputLenExpr = out_len.apply(q, qL, a);
 				negModel = ctx.mkAnd(negModel, ctx.mkEq(outputLenExpr, outputLen));
 				
 				/* d1exp: iterate through outputFunc */
 				int index = 0;
-				for (CharFunc f : outputFunc) {
-					if (f != null && f instanceof CharConstant) { 	// all the CharFuncs should be constants
-						Character out = ((CharConstant)f).c;
-						BitVecExpr outMoveNum = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
-						
-						Expr d1exp = d1.apply(q, a, (BitVecNum) ctx.mkNumeral(index, BV));
-						negModel = ctx.mkAnd(negModel, ctx.mkEq(d1exp, outMoveNum));
-					}
+				for (Character out : outputs) {
+					BitVecExpr outMoveNum = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+
+					Expr d1exp = d1.apply(q, qL, a, (BitVecNum) ctx.mkNumeral(index, BV));
+					negModel = ctx.mkAnd(negModel, ctx.mkEq(d1exp, outMoveNum));
 				}
 				
+			}
+			
+			for (FSAMove<Character> transition : lookaheadAut.getTransitionsFrom(lookaheadAut.getStates())) {
+				Integer stateFrom = transition.from;
+				Character input = transition.input;
+				Integer stateTo = transition.to;
+				
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				
+				/* dLexp */
+				Expr dLexp = dL.apply(q, a);
+				negModel = ctx.mkAnd(negModel, ctx.mkEq(dLexp, qPrime));
 			}
 			
 			/* negate model */
@@ -1046,13 +1059,13 @@ public class ConstraintsSolverLookahead {
 				
 				List<Integer> toStates = lookaheadAut.inverseDeltaStates(lookaheadState, input);
 				if (input != '<' && input != '>') {
-					System.out.println(input + " " + lookaheadState + " " + toStates);
+					// System.out.println(input + " " + lookaheadState + " " + toStates);
 				}
 				for (Integer toState : toStates) {
 					Integer newTo = (to * numLookaheadStates) + toState;
 					if (input != '<' && input != '>') {
-						System.out.print(transition.toDotString());
-						System.out.println(newFrom + " " + input + " " + outputs + " " + newTo);
+						// System.out.print(transition.toDotString());
+						// System.out.println(newFrom + " " + input + " " + outputs + " " + newTo);
 					}
 					transitions.add(new FSTMove<Character, Character>(newFrom, newTo, input, outputs));
 				}
@@ -1066,7 +1079,7 @@ public class ConstraintsSolverLookahead {
 		}
 		
 		FST<Character, Character> nonDetFT = FST.MkFST(transitions, 0, finalStates); // Fix Initial State
-		System.out.println(nonDetFT.toDotString());
+		// System.out.println(nonDetFT.toDotString());
 		nonDetFT = nonDetFT.mkOneInitialState(initialStates);
 		return nonDetFT;
 	}
@@ -1195,18 +1208,15 @@ public class ConstraintsSolverLookahead {
 		    }
 			
 			lookaheadAut = extractLookaheadAut(m);
-			System.out.println(lookaheadAut.toDotString());
 			
 			lookaheadFT = extractFT(m);
-			System.out.println(lookaheadFT.toDotString());
 			
 			FST<Character, Character> lookaheadNonDetFT = mkNonDetFT(lookaheadFT, lookaheadAut);
-			System.out.println(lookaheadNonDetFT.toDotString());
 		} else {
 			stopTime = System.nanoTime();
 		}
 		
-		FSTLookahead res = new FSTLookahead(lookaheadFT, lookaheadAut);
+		FSTLookahead<Character, Character> res = new FSTLookahead<Character, Character>(lookaheadFT, lookaheadAut);
 		return new Pair<FSTLookahead<Character, Character>, Long>(res, ((stopTime - startTime) / 1000000));
 	}
 
