@@ -4,7 +4,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,12 +14,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.Set;
 
 import org.junit.Test;
 import org.sat4j.specs.TimeoutException;
 
+import SFT.GetTag;
 import automata.SFAOperations;
 import automata.SFTOperations;
 import automata.sfa.SFA;
@@ -36,10 +35,7 @@ import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 import utilities.Pair;
-import utilities.SFAprovider;
 import utilities.Triple;
-import SFT.GetTag;
-import SFT.MalwareFingerprintingDecode;
 
 public class SFTBench {
 	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
@@ -255,7 +251,7 @@ public class SFTBench {
 		
 		SFA<CharPred, Character> source = outputLang;
 		SFA<CharPred, Character> target = outputCorrect;
-		
+		System.out.println(source.includedIn(target, ba));
 		
 		int[] fraction = new int[] {1, 1};
 		
@@ -353,10 +349,6 @@ public class SFTBench {
 	}
 	
 	static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	
-	public static SFT<CharPred, CharFunc, Character> modMkSwap1;
-	public static SFT<CharPred, CharFunc, Character> modMkSwap2;
-	public static SFT<CharPred, CharFunc, Character> modMkSwap3;
 	
 	public static List<SFT<CharPred, CharFunc, Character>> createRepairBenchmarks(SFT<CharPred, CharFunc, Character> aut) throws TimeoutException {
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = new ArrayList<SFT<CharPred, CharFunc, Character>>();
@@ -470,6 +462,7 @@ public class SFTBench {
 		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
+		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
 		
@@ -485,7 +478,8 @@ public class SFTBench {
         examples.add(new Pair<String, String>("A23B", "a23b"));
         examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
         
-        runRepairBenchmark(modSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase1");
+        Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> res = 
+        		runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase1");
 	}
 	
 	
@@ -521,7 +515,7 @@ public class SFTBench {
         examples.add(new Pair<String, String>("a23b", "A23B"));
         examples.add(new Pair<String, String>("&Yl", "&yL"));
         
-        runRepairBenchmark(modSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase2");
+        runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase2");
 	}
 	
 	
@@ -560,7 +554,7 @@ public class SFTBench {
         runRepairBenchmark(modSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase3");
 	}
 	
-	@Test
+	
 	public void modEscapeBrackets1() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
 		System.out.println(trans.toDotString(ba));
@@ -571,15 +565,25 @@ public class SFTBench {
 		
 		Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> unchanged = computeUnchangedDomain(trans, modSFT);
 		SFT<CharPred, CharFunc, Character> correctSFT = unchanged.first;
-		System.out.println(correctSFT.toDotString(ba));
 		SFA<CharPred, Character> correctInputSet = unchanged.second;
 		
-//		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
-//		System.out.println(outputLang.toDotString(ba));
-		
 		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
+		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
-		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba).determinize(ba);
+		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
+		System.out.println(target.toDotString(ba));
+		
+//		ArrayList<CharPred> preds = new ArrayList<CharPred>();
+//		preds.addAll(SFTOperations.getPreds(modSFT));
+//		preds.addAll(SFAOperations.getPreds(outputLang));
+//		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(preds);
+//		System.out.println(minterms);
+		
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
+		
+		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
+		source = unnormalized.first;
+		target = unnormalized.second.determinize(ba);
 		System.out.println(source.toDotString(ba));
 		System.out.println(target.toDotString(ba));
 		
@@ -588,12 +592,10 @@ public class SFTBench {
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("<", "&lt;"));
         
-        runRepairBenchmark(modSFT, source, target, 1, 4, fraction, examples, null, "modEscapeBrackets1");
-        
-        // ConstraintsTestSymbolic.customConstraintsTest(source, target, 1, 4, fraction, examples, null, false);
+        runRepairBenchmark(correctSFT, source, target, 1, 4, fraction, examples, null, "modEscapeBrackets1");
 	}
 	
-	
+	@Test
 	public void modEscapeBrackets3() throws TimeoutException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
 		System.out.println(trans.toDotString(ba));
@@ -602,10 +604,14 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(2);
 		System.out.println(modSFT.toDotString(ba));
 		
-		SFA<CharPred, Character> source = modSFT.getOverapproxOutputSFA(ba);
+		SFA<CharPred, Character> source = modSFT.getDomain(ba);
 		SFA<CharPred, Character> target = modSFT.getOverapproxOutputSFA(ba);
+		
+		
 		System.out.println(source.toDotString(ba));
 		System.out.println(target.toDotString(ba));
+		
+		
 	}
 	
 	

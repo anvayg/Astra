@@ -124,7 +124,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Benchmarks/escapeQuotes_out", "escapeQuotesSynth");
+				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Outputs/escapeQuotes_out", "escapeQuotesSynth");
 	}
 	
 	private static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotesBuggy() throws TimeoutException {
@@ -189,8 +189,8 @@ public class SFTSynthBench {
 		return SFT.MkSFT(transitions16, 0, finStatesAndTails16, ba);
 	}
 
-	
-	public void finiteEscapeQuotesBuggyRepair() throws TimeoutException {
+	@Test
+	public void finiteEscapeQuotesBuggyRepair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkFiniteEscapeQuotesBuggy();
 		System.out.println(EscapeQuotesBuggy.toDotString(ba));
 		
@@ -205,25 +205,26 @@ public class SFTSynthBench {
 		
 		SFA<CharPred, Character> source = outputLang;
 		SFA<CharPred, Character> target = outputCorrect;
+		System.out.println(source.includedIn(target, ba));
 		
 		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("a\\\"a", "a\\\"a"));
+		examples.add(new Pair<String, String>("a\\\\a", "a\\a"));
+		examples.add(new Pair<String, String>("a\\\\\"a", "a\\\"a"));
+		examples.add(new Pair<String, String>("a\\\\\\\\a", "a\\\\a"));
+		// examples.add(new Pair<String, String>("a\\", "a\\"));
 		
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+				Driver.runAlgorithm(source, target, 4, 1, fraction, examples, source, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", null);
 		
-		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
-		System.out.println(synthSFT.toDotString(ba));
-		
-		// restrict domain
-		SFT<CharPred, CharFunc, Character> restrictSFT = synthSFT.domainRestriction(source, ba);
-		System.out.println(restrictSFT.toDotString(ba));
-				
-		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(restrictSFT, ba);
+		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(result.first.first, ba);
 		System.out.println(repairSFT.toDotString(ba));
 	}
 	
-	@Test
+	
 	public void finiteEscapeQuotesSynthesis() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkFiniteEscapeQuotesBuggy();
 		System.out.println(EscapeQuotesBuggy.toDotString(ba));
@@ -253,7 +254,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Benchmarks/escapeQuotesFinite_out", "escapeQuotesSynth");
+				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", "escapeQuotesSynth");
 	}
 	
 	
