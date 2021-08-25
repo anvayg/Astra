@@ -130,7 +130,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
 		
 		// Changed: not making source DFA total
-		ConstraintsSolver c = new ConstraintsSolver(ctx, source, targetTotal, alphabetMap, numStates, outputBound, ioExamples, fraction, template, null, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, source, targetTotal, alphabetMap, numStates, outputBound, ioExamples, fraction, template, null, null, ba);
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(smtFile, debug).first;
 		
 		for (Pair<String, String> example : ioExamples) {
@@ -160,16 +160,13 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		
 		// Calling LookaheadSolver
 		ConstraintsSolverLookahead c = new ConstraintsSolverLookahead(ctx, source, targetTotal, alphabetMap, 
-				numStates, numLookaheadStates, outputBound, ioExamples, fraction, template, null, ba);
+				numStates, numLookaheadStates, outputBound, ioExamples, fraction, template, null, null, ba);
 		FSTLookahead<Character, Character> res = c.mkConstraints(smtFile, debug).first;
 		FST<Pair<Character, Integer>, Character> lookaheadFT = res.getTransducer();
 		FSA<Character> lookaheadAut = res.getAutomaton();
 		
-		System.out.println(lookaheadFT.toDotString());
-		
 		for (Pair<String, String> example : ioExamples) {
         	List<Character> exampleOutput = res.outputOn(lOfS(example.first));
-        	System.out.println(exampleOutput + ", " + example.second);
             assertTrue(exampleOutput.equals(lOfS(example.second)));
         }
 		
@@ -253,7 +250,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         
         // constraintsTest1(ctx);
         // constraintsTest2(ctx);
-        constraintsTest3(ctx);
-        // getTags(ctx);
+        // constraintsTest3(ctx);
+        getTags(ctx);
 	}
 }

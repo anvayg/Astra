@@ -6,14 +6,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 import org.sat4j.specs.TimeoutException;
 
-import automata.SFAOperations;
 import automata.SFTOperations;
 import automata.sfa.SFA;
 import solver.Driver;

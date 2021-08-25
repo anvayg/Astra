@@ -273,11 +273,19 @@ public class ConstraintsTestSymbolic {
 		
 		FSTLookahead<Character, Character> mySFT = null;
 		ConstraintsSolverLookahead c = new ConstraintsSolverLookahead(ctx, sourceFinite, targetTotal, alphabetMap, 
-				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, null, ba);
+				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, null, idToMinterm, ba);
 		mySFT = c.mkConstraints(smtFile, debug).first;
 		FST<Pair<Character, Integer>, Character> lookaheadFT = mySFT.getTransducer();
 		FSA<Character> lookaheadAut = mySFT.getAutomaton();
-		System.out.println(lookaheadFT.toDotString());
+		
+		// TODO Get second solution if there is one
+		c = new ConstraintsSolverLookahead(ctx, sourceFinite, targetTotal, alphabetMap, 
+				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, mySFT, idToMinterm, ba);
+		FSTLookahead<Character, Character> mySFT2 = c.mkConstraints(smtFile, debug).first;
+		
+		System.out.println(mySFT.getTransducer().toDotString());
+		System.out.println(mySFT2.getTransducer().toDotString());
+		System.out.println(mySFT2.getAutomaton().toDotString());
 		
 		// Make non-det FT
 		FST<Character, Character> nonDetFT = c.mkNonDetFT(lookaheadFT, lookaheadAut);
@@ -286,9 +294,11 @@ public class ConstraintsTestSymbolic {
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = FSTOperations.mintermExpansion(nonDetFT, triple.third, ba);
 		System.out.println(mySFTexpanded.toDotString(ba));
 		
+		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded, ba);
+		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first, ba);
-        	System.out.println(exampleOutput);
+        	List<String> exampleOutputs = SFTOperations.getAllOutputs(mySFTrestricted, example.first, ba);
+        	System.out.println(exampleOutputs);
         	// assertTrue(exampleOutput.equals(example.second));
         }
 		
