@@ -130,7 +130,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(target, alphabetSet, ba);
 		
 		// Changed: not making source DFA total
-		ConstraintsSolver c = new ConstraintsSolver(ctx, source, targetTotal, alphabetMap, numStates, outputBound, ioExamples, fraction, template, null, null, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, source, targetTotal, alphabetMap, numStates, outputBound, ioExamples, "mean", fraction, template, null, null, ba);
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(smtFile, debug).first;
 		
 		for (Pair<String, String> example : ioExamples) {

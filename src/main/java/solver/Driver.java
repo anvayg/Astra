@@ -142,7 +142,7 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, fraction, template, null, null, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 		mySFT = res.first;
 		solvingTime1 = res.second;
@@ -153,7 +153,7 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, fraction, null, mySFT, null, ba);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, null, ba);
 			res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;

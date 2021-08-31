@@ -50,7 +50,8 @@ public class ConstraintsSolver {
 	int numStates;
 	int numLookaheadStates;
 	int outputBound;
-	int[] distance; 	// Change later to allow different distances
+	String distanceType;
+	int[] distance;
 	List<Pair<String, String>> ioExamples;
 	SFA<CharPred, Character> template;
 	SFT<CharPred, CharFunc, Character> solution;
@@ -93,8 +94,9 @@ public class ConstraintsSolver {
 	/* Constructor */
 	public ConstraintsSolver(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			HashMap<Character, Integer> alphabetMap, int numStates, int outputBound, List<Pair<String, String>> ioExamples, 
-			int[] distance, SFA<CharPred, Character> template, SFT<CharPred, CharFunc, Character> solution, 
-			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+			String distanceType, int[] distance, SFA<CharPred, Character> template, 
+			SFT<CharPred, CharFunc, Character> solution, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.solver = ctx.mkSolver();
 		this.source = source;
@@ -103,6 +105,7 @@ public class ConstraintsSolver {
 		this.numStates = numStates;
 		this.outputBound = outputBound;
 		this.ioExamples = ioExamples;
+		this.distanceType = distanceType;
 		this.distance = distance;
 		this.template = template;
 		this.solution = solution;
@@ -245,9 +248,14 @@ public class ConstraintsSolver {
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void encodeDistance() throws TimeoutException {
+	public void encodeDistanceBounded() throws TimeoutException {
+		/* In this case, the fraction must be a whole number (it should have denominator 1) */
+		int numEdits = distance[0];
+		BitVecExpr editsBound = (BitVecNum) ctx.mkNumeral(numEdits, BV);
 		
-		/* edit-distance constraints of individual transitions */
+		/* C(q^0_R, q^0, q^0_T) = numEdits */
+		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), editsBound));
+		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q 
 			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
@@ -258,59 +266,102 @@ public class ConstraintsSolver {
 				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
 				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
 				
-				/* make variable out_len(q, a) */
+				/* out_len(q, a) */
 				Expr outLenExpr = out_len.apply(q, a);
+					
+				/* make variable q_R' = d_R(q_R, a), the equality is already encoded */
+				Expr qRPrime = dR.apply(qR, a);
 				
-				/* make variable ed_dist(q, a) */
-				Expr edDistExpr = edDist.apply(q, a);
+				
+				/* make variable q' = d2(q, a) */
+				Expr qPrime = d2.apply(q, a);
+							
 				
 				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
 				
 				/* make array of output chars */
 				Expr[] outputChars = new Expr[outputBound];
 				
-				/* comparing a to each output char */
-				Expr disjunct = ctx.mkFalse();
-				
 				for (int l = 0; l < outputBound; l++) {
 					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
 					Expr d1exp = d1.apply(q, a, index);
-					outputChars[l] = d1exp;
-					Expr lt = ctx.mkBVSLT(index, outLenExpr);
-					Expr eq = ctx.mkEq(a, d1exp);
-					disjunct = ctx.mkOr(disjunct, ctx.mkAnd(lt, eq));
+					outputChars[l] = d1exp; 
 				}
-
-				/* for condition where the output chars don't include 'a' */
-				Expr negDisjunct = ctx.mkNot(disjunct);
 				
-				/* (k = 0) ==> ed_dist(q, a) = 1 */
-				Expr lenEq = ctx.mkEq(outLenExpr, zero);
-				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkNumeral(1, BV));
-				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
+				/* ed_dist(q, a) */
+				Expr edDistExpr = edDist.apply(q, a);
 				
-				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
-				Expr lenNotZero = ctx.mkNot(lenEq);
-				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkBVSub(outLenExpr, ctx.mkNumeral(1, BV))); 	
-				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
+				/* m - (n x ed_dist(q, a)) */
+				BitVecExpr m = (BitVecNum) ctx.mkNumeral(distance[0], BV); 
+				BitVecExpr n = (BitVecNum) ctx.mkNumeral(distance[1], BV);
+				BitVecExpr diff = ctx.mkBVSub(m, ctx.mkBVMul(n, edDistExpr));
 				
-				/* \neg (k = 0) ==> ed_dist(q, a) = k */
-				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
-				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
-				
-				/* ed_dist constraint 1 */
-				Expr consequent = ctx.mkAnd(impl1, impl2);
-				solver.add(ctx.mkImplies(disjunct, consequent));
+				for (Integer targetFrom : target.getStates()) {
+					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
 					
-				/* ed_dist constraint 2 */
-				consequent = ctx.mkAnd(impl1, impl3);
-				solver.add(ctx.mkImplies(negDisjunct, consequent));
+					
+					/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
+					
+					/* make array of destination states in target */
+					Expr[] dstStates = new Expr[outputBound];
+					
+					dstStates[0] = dT.apply(qT, outputChars[0]);
+					for (int l = 1; l < outputBound; l++) { 		// start from 1 in the loop
+						dstStates[l] = dT.apply(dstStates[l - 1], outputChars[l]); // changed to l from l-1
+					}
+		
+					/* C(q_R, q, q_T) */
+					Expr cExpr = energy.apply(qR, q, qT);
+					
+					/* special case for 0 */
+					Expr lenEq = ctx.mkEq(outLenExpr, zero);
+					
+					/* C(qRPrime, qPrime, qT) = C(q_R, q, q_T) - ed_dist(q, a) */
+					Expr cExprPrime = energy.apply(qRPrime, qPrime, qT);
+					Expr cNewExpr = ctx.mkEq(cExprPrime, ctx.mkBVSub(cExpr, edDistExpr));
+					
+					Expr c = ctx.mkImplies(lenEq, cNewExpr);
+					solver.add(c);
+					
+					
+					/* loop for the rest */
+					for (int l = 0; l < outputBound; l++) {
+						int outputLength = l + 1;
+						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BV));
+						
+						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
+						cNewExpr = ctx.mkEq(cExprPrime, ctx.mkBVSub(cExpr, edDistExpr));
+						
+						c = ctx.mkImplies(lenEq, cNewExpr);
+						solver.add(c);
+					}
+				}
 			}
 		}
+		
+		/* C(q_R, q, q_T) >= 0 */
+		for (int i = 0; i < numStates; i++) {
+			for (Integer sourceState : source.getStates()) {
+				for (Integer targetState : target.getStates()) {
+					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
+					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BV);
+					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+										
+					Expr cExpr = energy.apply(sourceInt, stateInt, targetInt);
+					Expr cGreaterExp = ctx.mkBVSGE(cExpr, zero);
+					solver.add(cGreaterExp);
+				}
+			}
+		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void encodeDistanceMean() throws TimeoutException {
 		
 		/* C(q^0_R, q^0, q^0_T) = 0 */
 		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), zero));
 		
+		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q 
 			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
 				
@@ -418,6 +469,84 @@ public class ConstraintsSolver {
 				}
 			}
 		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void encodeDistancePreferential() throws TimeoutException {
+		
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void encodeDistance() throws TimeoutException {
+		/* edit-distance constraints of individual transitions */
+		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
+		for (int i = 0; i < numStates; i++) {	// q 
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+				
+			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
+				Integer stateFrom = sourceTransition.from;
+				Character move = sourceTransition.getWitness(ba);
+				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				
+				/* make variable out_len(q, a) */
+				Expr outLenExpr = out_len.apply(q, a);
+				
+				/* make variable ed_dist(q, a) */
+				Expr edDistExpr = edDist.apply(q, a);
+				
+				/* c_0 = d1(q, a, 0), c_1 = d1(q, a, 1), ..., c_{l-1} = d1(q, a, l-1) */
+				
+				/* make array of output chars */
+				Expr[] outputChars = new Expr[outputBound];
+				
+				/* comparing a to each output char */
+				Expr disjunct = ctx.mkFalse();
+				
+				for (int l = 0; l < outputBound; l++) {
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					Expr d1exp = d1.apply(q, a, index);
+					outputChars[l] = d1exp;
+					Expr lt = ctx.mkBVSLT(index, outLenExpr);
+					Expr eq = ctx.mkEq(a, d1exp);
+					disjunct = ctx.mkOr(disjunct, ctx.mkAnd(lt, eq));
+				}
+
+				/* for condition where the output chars don't include 'a' */
+				Expr negDisjunct = ctx.mkNot(disjunct);
+				
+				/* (k = 0) ==> ed_dist(q, a) = 1 */
+				Expr lenEq = ctx.mkEq(outLenExpr, zero);
+				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkNumeral(1, BV));
+				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
+				Expr lenNotZero = ctx.mkNot(lenEq);
+				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkBVSub(outLenExpr, ctx.mkNumeral(1, BV))); 	
+				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
+				
+				/* \neg (k = 0) ==> ed_dist(q, a) = k */
+				Expr edDistK = ctx.mkEq(edDistExpr, outLenExpr); 
+				Expr impl3 = ctx.mkImplies(lenNotZero, edDistK);
+				
+				/* ed_dist constraint 1 */
+				Expr consequent = ctx.mkAnd(impl1, impl2);
+				solver.add(ctx.mkImplies(disjunct, consequent));
+					
+				/* ed_dist constraint 2 */
+				consequent = ctx.mkAnd(impl1, impl3);
+				solver.add(ctx.mkImplies(negDisjunct, consequent));
+			}
+		}
+		
+		/* Different kinds of distances */
+		if (distanceType.equals("bounded")) encodeDistanceBounded();
+		
+		else if (distanceType.equals("mean")) encodeDistanceMean();
+		
+		else if (distanceType.equals("preferential")) encodeDistancePreferential();
+		
+		else throw new IllegalArgumentException("Unsupported distanceType");
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
