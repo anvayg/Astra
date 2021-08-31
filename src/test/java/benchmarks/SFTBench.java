@@ -445,7 +445,7 @@ public class SFTBench {
 		return new Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>>(unchangedSFT, unchangedSFT.getDomain(ba));
 	}
 	
-	
+	@Test
 	public void modMkSwapCase1Repair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkSwapCase();
 		System.out.println(trans.toDotString(ba));
@@ -463,6 +463,8 @@ public class SFTBench {
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
+		System.out.println(outputLang.toDotString(ba));
+		System.out.println(target.toDotString(ba));
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
 		
@@ -595,7 +597,7 @@ public class SFTBench {
         runRepairBenchmark(correctSFT, source, target, 1, 4, fraction, examples, null, "modEscapeBrackets1");
 	}
 	
-	@Test
+	
 	public void modEscapeBrackets3() throws TimeoutException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
 		System.out.println(trans.toDotString(ba));
@@ -612,6 +614,41 @@ public class SFTBench {
 		System.out.println(target.toDotString(ba));
 		
 		
+	}
+	
+	
+	public void modCaesarCipher1() throws TimeoutException, IOException {
+		SFT<CharPred, CharFunc, Character> trans = mkCaesarCipher();
+		System.out.println(trans.toDotString(ba));
+		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
+		
+		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
+		System.out.println(modSFT.toDotString(ba));
+		
+		Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> unchanged = computeUnchangedDomain(trans, modSFT);
+		SFT<CharPred, CharFunc, Character> correctSFT = unchanged.first;
+		System.out.println(correctSFT.toDotString(ba));
+		SFA<CharPred, Character> correctInputSet = unchanged.second;
+		
+		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
+		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
+		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
+		
+		
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
+		
+		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
+		source = unnormalized.first;
+		target = unnormalized.second;
+		System.out.println(source.toDotString(ba));
+		System.out.println(target.toDotString(ba));
+		
+		int[] fraction = new int[] {1, 1};
+		
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>("3", "6"));
+        
+        runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modCaesarCipher1");
 	}
 	
 	
