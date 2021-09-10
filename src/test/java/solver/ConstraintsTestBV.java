@@ -225,6 +225,8 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("<<s<", ""));
 		examples.add(new Pair<String, String>("<st", ""));
+		examples.add(new Pair<String, String>("s<>", ""));
+		examples.add(new Pair<String, String>(">", ""));
 		examples.add(new Pair<String, String>("<s>", "<s>"));
 		examples.add(new Pair<String, String>("<st<s>", "<s>"));
 		SFT<CharPred, CharFunc, Character> synthSFT = 

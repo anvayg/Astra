@@ -278,17 +278,17 @@ public class ConstraintsTestSymbolic {
 		FST<Pair<Character, Integer>, Character> lookaheadFT = mySFT.getTransducer();
 		FSA<Character> lookaheadAut = mySFT.getAutomaton();
 		
-		// TODO Get second solution if there is one
-		c = new ConstraintsSolverLookahead(ctx, sourceFinite, targetTotal, alphabetMap, 
-				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, mySFT, idToMinterm, ba);
-		FSTLookahead<Character, Character> mySFT2 = c.mkConstraints(smtFile, debug).first;
+		// Get second solution if there is one
+//		c = new ConstraintsSolverLookahead(ctx, sourceFinite, targetTotal, alphabetMap, 
+//				numStates, numLookaheadStates, outputBound, examplesFinite, fraction, template, mySFT, idToMinterm, ba);
+//		FSTLookahead<Character, Character> mySFT2 = c.mkConstraints(smtFile, debug).first;
 		
 		System.out.println(mySFT.getTransducer().toDotString());
-		System.out.println(mySFT2.getTransducer().toDotString());
-		System.out.println(mySFT2.getAutomaton().toDotString());
+		System.out.println(mySFT.getAutomaton().toDotString());
 		
 		// Make non-det FT
 		FST<Character, Character> nonDetFT = c.mkNonDetFT(lookaheadFT, lookaheadAut);
+		System.out.println(nonDetFT.toDotString());
 		
 		// Call minterm expansion
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = FSTOperations.mintermExpansion(nonDetFT, triple.third, ba);
