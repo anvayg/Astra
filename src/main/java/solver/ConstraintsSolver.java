@@ -150,7 +150,7 @@ public class ConstraintsSolver {
 		solver.add(res);
 		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
-		for (int i = 0; i < numStates; i++) {	// q 
+		for (int i = 0; i < numStates; i++) {	// q
 			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
@@ -290,11 +290,6 @@ public class ConstraintsSolver {
 				
 				/* ed_dist(q, a) */
 				Expr edDistExpr = edDist.apply(q, a);
-				
-				/* m - (n x ed_dist(q, a)) */
-				BitVecExpr m = (BitVecNum) ctx.mkNumeral(distance[0], BV); 
-				BitVecExpr n = (BitVecNum) ctx.mkNumeral(distance[1], BV);
-				BitVecExpr diff = ctx.mkBVSub(m, ctx.mkBVMul(n, edDistExpr));
 				
 				for (Integer targetFrom : target.getStates()) {
 					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);

@@ -493,12 +493,15 @@ public class ConstraintsSolverLookahead {
 			
 			/* encode values of reverse run */
 			Expr previousState = zero;
-			for (int l = inputLen - 1; l >= 0; l--) {
-				Expr character = (BitVecNum) ctx.mkNumeral(inputArr[l], BV);
+			Expr rExpr = r.apply(ctx.mkNumeral(inputLen - 1, BV));
+			solver.add(ctx.mkEq(rExpr, previousState));
+			
+			for (int l = inputLen - 2; l >= 0; l--) {
+				Expr character = (BitVecNum) ctx.mkNumeral(inputArr[l + 1], BV);
 				Expr nextState = dL.apply(previousState, character);
-				Expr rExpr = r.apply(ctx.mkNumeral(l, BV));
+				rExpr = r.apply(ctx.mkNumeral(l, BV));
 				
-				solver.add(ctx.mkEq(rExpr, nextState)); 	// TODO: check logic
+				solver.add(ctx.mkEq(rExpr, nextState));
 				previousState = nextState;
 			}
 			
@@ -630,16 +633,9 @@ public class ConstraintsSolverLookahead {
 
 
 									/* make big constraint */
-									Expr rExpr = null;
-									Expr antecedent = null;
-									if (i != inputLen - 1) { 	// if not the last character of string
-										/* r_k(i + 1) = qL */
-										rExpr = ctx.mkEq(r.apply(ctx.mkNumeral(i + 1, BV)), qL);
-										
-										antecedent = ctx.mkAnd(eExpr, inputEq, rExpr);
-									} else {
-										antecedent = ctx.mkAnd(eExpr, inputEq);
-									}
+									rExpr = ctx.mkEq(r.apply(ctx.mkNumeral(i, BV)), qL);
+									Expr antecedent = ctx.mkAnd(eExpr, inputEq, rExpr);
+
 									
 									solver.add(ctx.mkImplies(antecedent, consequent));
 								}
@@ -1055,20 +1051,14 @@ public class ConstraintsSolverLookahead {
 				Character input = transition.input.first;
 				List<Character> outputs = transition.outputs;
 				
-				Integer newFrom = (from * numLookaheadStates) + lookaheadState;
+				Integer newTo = (to * numLookaheadStates) + lookaheadState;
 				
-				List<Integer> toStates = lookaheadAut.inverseDeltaStates(lookaheadState, input);
-				if (input != '<' && input != '>') {
-					// System.out.println(input + " " + lookaheadState + " " + toStates);
+				Integer fromState = lookaheadAut.getSuccessorState(lookaheadState, input);
+				if (fromState == -1) {
+					System.out.println(newTo + ", " + input);
 				}
-				for (Integer toState : toStates) {
-					Integer newTo = (to * numLookaheadStates) + toState;
-					if (input != '<' && input != '>') {
-						// System.out.print(transition.toDotString());
-						// System.out.println(newFrom + " " + input + " " + outputs + " " + newTo);
-					}
-					transitions.add(new FSTMove<Character, Character>(newFrom, newTo, input, outputs));
-				}
+				Integer newFrom = (from * numLookaheadStates) + fromState;
+				transitions.add(new FSTMove<Character, Character>(newFrom, newTo, input, outputs));
 			}
 		}
 		
@@ -1079,7 +1069,7 @@ public class ConstraintsSolverLookahead {
 		}
 		
 		FST<Character, Character> nonDetFT = FST.MkFST(transitions, 0, finalStates); // Fix Initial State
-		// System.out.println(nonDetFT.toDotString());
+		System.out.println(nonDetFT.toDotString());
 		nonDetFT = nonDetFT.mkOneInitialState(initialStates);
 		return nonDetFT;
 	}
@@ -1211,7 +1201,7 @@ public class ConstraintsSolverLookahead {
 			
 			lookaheadFT = extractFT(m);
 			
-			FST<Character, Character> lookaheadNonDetFT = mkNonDetFT(lookaheadFT, lookaheadAut);
+			// FST<Character, Character> lookaheadNonDetFT = mkNonDetFT(lookaheadFT, lookaheadAut);
 		} else {
 			stopTime = System.nanoTime();
 		}
