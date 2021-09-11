@@ -213,6 +213,42 @@ public class SFAOperations {
 		return minterms;
 	}
 	
+	public static SFA<CharPred, Character> unnormalize(SFA<CharPred, Character> aut1, 
+			Collection<Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		if (minterms == null) {
+			// Get all predicates
+			ArrayList<CharPred> predicates1 = new ArrayList<CharPred>();  
+			 
+			for (Integer state : aut1.getStates()) {
+				for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+					predicates1.add(transition.guard);
+				}
+			}
+			
+			minterms = ba.GetMinterms(predicates1);
+		}
+		
+		// Make new transitions
+		Collection<SFAMove<CharPred, Character>> transitions1 = new ArrayList<SFAMove<CharPred, Character>>();
+		
+		for (Integer state : aut1.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+				for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+					CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+					if (ba.IsSatisfiable(conj)) {
+						SFAInputMove<CharPred, Character> newTransition = (SFAInputMove<CharPred, Character>) transition.clone();
+						newTransition.guard = minterm.first;
+						transitions1.add(newTransition);
+					}
+				}
+			}
+		}
+		
+		SFA<CharPred, Character> finAut1 = SFA.MkSFA(transitions1, aut1.getInitialState(), aut1.getFinalStates(), ba, false, false);
+		
+		return finAut1;
+	}
+	
 	/* 'Unnormalizes' two SFAs using the given minterms */
 	public static Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalize(SFA<CharPred, Character> aut1, 
 			SFA<CharPred, Character> aut2, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
