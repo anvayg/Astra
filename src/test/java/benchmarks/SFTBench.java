@@ -44,140 +44,7 @@ public class SFTBench {
 	 * Reference implementations: https://github.com/lorisdanto/symbolicautomata/blob/master/benchmarks/src/main/java/SFT/
 	 * */
 	
-	
-	/* GetTags */
-	public static SFT<CharPred, CharFunc, Character> GetTags;
-	
-	/* GetTags */
-	public static SFT<CharPred, CharFunc, Character> GetTagsBuggy;
-	
-	/* Missing transition from state 2 to state 1 */
-	private static SFT<CharPred, CharFunc, Character> MkGetTagsSFTBuggy() throws TimeoutException {
-		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
-
-		List<CharFunc> output00 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, ba.MkNot(new CharPred('<')), output00));
-
-		List<CharFunc> output01 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 1, new CharPred('<'), output01));
-
-		List<CharFunc> output11 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 1, new CharPred('<'), output11));
-
-		List<CharFunc> output12 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 2, ba.MkNot(new CharPred('<')), output12));
-
-		List<CharFunc> output13 = new ArrayList<CharFunc>();
-		output13.add(new CharConstant('<'));
-		output13.add(CharOffset.IDENTITY);
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 3, ba.MkNot(new CharPred('<')), output13));
-
-		List<CharFunc> output20 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(2, 0, ba.MkAnd(ba.MkNot(new CharPred('<')), ba.MkNot(new CharPred('>'))), output20));
-
-		List<CharFunc> output30 = new ArrayList<CharFunc>();
-		output30.add(CharOffset.IDENTITY);
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(3, 0, new CharPred('>'), output30));
-
-		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
-		finStatesAndTails.put(0, new HashSet<List<Character>>());
-		finStatesAndTails.put(1, new HashSet<List<Character>>());
-		finStatesAndTails.put(2, new HashSet<List<Character>>());
-
-		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
-	}
-	
-	/* Assume that there are no substrings of the form '<a' in the input, for experimenting */
-	private static SFT<CharPred, CharFunc, Character> MkGetTagsSFTMod() throws TimeoutException {
-		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
-
-		List<CharFunc> output00 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 0, ba.MkNot(new CharPred('<')), output00));
-
-		List<CharFunc> output01 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(0, 1, new CharPred('<'), output01));
-
-		List<CharFunc> output11 = new ArrayList<CharFunc>();
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 1, new CharPred('<'), output11));
-
-		List<CharFunc> output13 = new ArrayList<CharFunc>();
-		output13.add(new CharConstant('<'));
-		output13.add(CharOffset.IDENTITY);
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(1, 3, ba.MkNot(new CharPred('<')), output13));
-
-		List<CharFunc> output30 = new ArrayList<CharFunc>();
-		output30.add(CharOffset.IDENTITY);
-		transitions.add(new SFTInputMove<CharPred, CharFunc, Character>(3, 0, new CharPred('>'), output30));
-
-		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
-		finStatesAndTails.put(0, new HashSet<List<Character>>());
-		finStatesAndTails.put(1, new HashSet<List<Character>>());
-
-		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
-	}
-	
-	
-	public void getTags() throws TimeoutException {
-		GetTagsBuggy = MkGetTagsSFTBuggy();
-		GetTags = GetTag.MkGetTagsSFT();
-		System.out.println(GetTagsBuggy.toDotString(ba));
-		System.out.println(GetTags.toDotString(ba));
-		
-		SFA<CharPred, Character> inputLang = GetTagsBuggy.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputLang.toDotString(ba));
-		
-		SFA<CharPred, Character> inputCorrect = GetTags.getDomain(ba).removeEpsilonMoves(ba);
-		System.out.println(inputCorrect.toDotString(ba));
-		
-		SFA<CharPred, Character> source = inputCorrect.minus(inputLang, ba).determinize(ba);
-		assertTrue(source.accepts(lOfS("<<s<"), ba));
-		assertTrue(source.accepts(lOfS("<<s<s>"), ba));
-		assertTrue(source.accepts(lOfS("<<s<st"), ba));
-		System.out.println(source.toDotString(ba));
-	
-		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
-		System.out.println(target.toDotString(ba));
-		
-		int[] fraction = new int[] {1, 1};
-		
-		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("<<s<", ""));
-		examples.add(new Pair<String, String>("<<s<s>", "<s>"));
-		examples.add(new Pair<String, String>("<<s<st", ""));
-		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
-		
-		// restrict domain to add final states
-		SFT<CharPred, CharFunc, Character> restrictSFT = synthSFT.domainRestriction(source, ba);
-		
-		SFT<CharPred, CharFunc, Character> repairSFT = GetTagsBuggy.unionWith(restrictSFT, ba);
-		System.out.println(repairSFT.toDotString(ba));
-		System.out.println(repairSFT.getInitialState());
-	}
-	
-	/* Deterministic variant of GetTags */
-	
-	public void getTagsMod() throws TimeoutException {
-		GetTags = MkGetTagsSFTMod();
-		System.out.println(GetTags.toDotString(ba));
-		System.out.println(GetTags.isDeterministic());
-		
-		SFA<CharPred, Character> domain = GetTags.getDomain(ba).removeEpsilonMoves(ba).determinize(ba);
-		assertTrue(domain.accepts(lOfS(""), ba));
-		assertTrue(domain.accepts(lOfS(""), ba));
-		
-		SFA<CharPred, Character> range = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
-		
-		System.out.println(domain);
-		System.out.println(range);
-		
-		int[] fraction = new int[] {1, 1};
-		
-		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("<<s>", "<s>"));
-		examples.add(new Pair<String, String>("<s><t>", "<s><t>"));
-		
-		ConstraintsTestSymbolic.customConstraintsTest(domain, range, 3, 2, fraction, examples, null, false);
-	}
+	// TODO: move getTags (cleaned up) here
 	
 	public static SFT<CharPred, CharFunc, Character> mkEscapeQuotesBuggy() throws TimeoutException {
 		List<SFTMove<CharPred, CharFunc, Character>> transitions16 = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
@@ -445,7 +312,7 @@ public class SFTBench {
 		return new Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>>(unchangedSFT, unchangedSFT.getDomain(ba));
 	}
 	
-	@Test
+	
 	public void modMkSwapCase1Repair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkSwapCase();
 		System.out.println(trans.toDotString(ba));
@@ -454,7 +321,6 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
 		System.out.println(modSFT.toDotString(ba));
 		
-		/* Cannot repair from output because output has only 1 minterm, as currently implemented */
 		Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> unchanged = computeUnchangedDomain(trans, modSFT);
 		SFT<CharPred, CharFunc, Character> correctSFT = unchanged.first;
 		SFA<CharPred, Character> correctInputSet = unchanged.second;
@@ -462,17 +328,8 @@ public class SFTBench {
 		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
-		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
-		System.out.println(outputLang.toDotString(ba));
-		System.out.println(target.toDotString(ba));
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
-		
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		target = unnormalized.second;
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
 		
 		int[] fraction = new int[] {1, 1};
         
@@ -480,8 +337,10 @@ public class SFTBench {
         examples.add(new Pair<String, String>("A23B", "a23b"));
         examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
         
-        Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> res = 
-        		runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase1");
+        
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", null);
+        
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", "testOutputFile");
 	}
 	
 	
@@ -493,23 +352,16 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(1);
 		System.out.println(modSFT.toDotString(ba));
 		
-		/* Cannot repair from output because output has only 1 minterm, as currently implemented */
 		Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> unchanged = computeUnchangedDomain(trans, modSFT);
 		SFT<CharPred, CharFunc, Character> correctSFT = unchanged.first;
-		System.out.println(correctSFT.toDotString(ba));
 		SFA<CharPred, Character> correctInputSet = unchanged.second;
 		
 		SFA<CharPred, Character> inputLang = trans.getDomain(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
-		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(trans, ba);
-		
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		target = unnormalized.second;
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(trans, ba); 
+			// need to use the orginal transducer's minterms here
 		
 		int[] fraction = new int[] {1, 1};
         
@@ -517,7 +369,7 @@ public class SFTBench {
         examples.add(new Pair<String, String>("a23b", "A23B"));
         examples.add(new Pair<String, String>("&Yl", "&yL"));
         
-        runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase2");
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, minterms, 1, 1, fraction, examples, null, "modSwapCase2", null);
 	}
 	
 	
@@ -531,21 +383,13 @@ public class SFTBench {
 		
 		Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> unchanged = computeUnchangedDomain(trans, modSFT);
 		SFT<CharPred, CharFunc, Character> correctSFT = unchanged.first;
-		System.out.println(correctSFT.toDotString(ba));
 		SFA<CharPred, Character> correctInputSet = unchanged.second;
 		
 		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
-		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
-		
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		target = unnormalized.second;
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
 		
 		int[] fraction = new int[] {1, 1};
         
@@ -553,10 +397,10 @@ public class SFTBench {
         examples.add(new Pair<String, String>("A23B", "a23b"));
         examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
         
-        runRepairBenchmark(modSFT, source, target, 1, 1, fraction, examples, null, "modSwapCase3");
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, minterms, 1, 1, fraction, examples, null, "modSwapCase3", null);
 	}
 	
-	
+	@Test
 	public void modEscapeBrackets1() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
 		System.out.println(trans.toDotString(ba));
@@ -570,31 +414,20 @@ public class SFTBench {
 		SFA<CharPred, Character> correctInputSet = unchanged.second;
 		
 		SFA<CharPred, Character> inputLang = modSFT.getDomain(ba);
-		SFA<CharPred, Character> outputLang = modSFT.getOverapproxOutputSFA(ba);
 		SFA<CharPred, Character> source = inputLang.minus(correctInputSet, ba).determinize(ba);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
-		System.out.println(target.toDotString(ba));
-		
-//		ArrayList<CharPred> preds = new ArrayList<CharPred>();
-//		preds.addAll(SFTOperations.getPreds(modSFT));
-//		preds.addAll(SFAOperations.getPreds(outputLang));
-//		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(preds);
-//		System.out.println(minterms);
-		
-		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
-		
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		target = unnormalized.second.determinize(ba);
 		System.out.println(source.toDotString(ba));
 		System.out.println(target.toDotString(ba));
+		
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
+		// TODO Adding required predicates/minterms
 		
 		int[] fraction = new int[] {3, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("<", "&lt;"));
         
-        runRepairBenchmark(correctSFT, source, target, 1, 4, fraction, examples, null, "modEscapeBrackets1");
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, minterms, 1, 4, fraction, examples, null, "modEscapeBrackets1", null);
 	}
 	
 	
@@ -612,7 +445,6 @@ public class SFTBench {
 		
 		System.out.println(source.toDotString(ba));
 		System.out.println(target.toDotString(ba));
-		
 		
 	}
 	
@@ -637,56 +469,18 @@ public class SFTBench {
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT, ba);
 		
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		target = unnormalized.second;
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
-		
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("3", "6"));
         
-        runRepairBenchmark(correctSFT, source, target, 1, 1, fraction, examples, null, "modCaesarCipher1");
+        RunBenchmarks.runRepairBenchmark(correctSFT, source, target, null, 1, 1, fraction, examples, null, "modCaesarCipher1", null);
 	}
 	
 	
-	// Move this if need be
-	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
-	runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
-			String benchmarkName) throws TimeoutException, IOException {
-		
-		String filename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
-		BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename)));
-		br.write("Running benchmark\n");
-		br.close();
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, filename, benchmarkName);
-		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
-		String witness = result.third;
-		
-		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.unionWith(mySFT, ba);
-		System.out.println(mySFTrepair.toDotString(ba));
-		
-		br = new BufferedWriter(new FileWriter(new File(filename), true));
-		br.write("SFTrepair1:\n");
-		br.write(mySFTrepair.toDotString(ba));
-		
-		SFT<CharPred, CharFunc, Character> mySFT2repair = null;
-		if (witness != null) {
-			mySFT2repair = aut.unionWith(mySFT2, ba);
-			br.write("SFTrepair2:\n");
-			br.write(mySFT2repair.toDotString(ba));
-		}
-		br.close();
-		
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTrepair, result.first.second);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2repair, result.second.second);
-		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
-	}
+	// Introducing bugs in FlashFill synthesis benchmarks
+	
+	
 	
 	private static List<Character> lOfS(String s) {
 		List<Character> l = new ArrayList<Character>();

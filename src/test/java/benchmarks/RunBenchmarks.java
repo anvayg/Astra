@@ -131,7 +131,7 @@ public class RunBenchmarks {
 		
 		// Call solver
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, "src/test/java/benchmarks/tmpOutput", benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
 	}
 	
 	
@@ -167,10 +167,11 @@ public class RunBenchmarks {
 		source = unnormalized.first;
 		System.out.println(source.toDotString(ba));
 		target = unnormalized.second;
+		// System.out.println(target.toDotString(ba));
 		
-		
+		// TODO: Change driver to be able to use provided minterms
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
 		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
 		String witness = result.third;
@@ -207,7 +208,7 @@ public class RunBenchmarks {
 		br.write("Running benchmark\n");
 		br.close();
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, filename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, filename, benchmarkName);
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
 		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
 		String witness = result.third;

@@ -124,7 +124,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Outputs/escapeQuotes_out", "escapeQuotesSynth");
+				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, null, null, "src/test/java/benchmarks/Outputs/escapeQuotes_out", "escapeQuotesSynth");
 	}
 	
 	private static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotesBuggy() throws TimeoutException {
@@ -218,7 +218,7 @@ public class SFTSynthBench {
 		// examples.add(new Pair<String, String>("a\\", "a\\"));
 		
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, 4, 1, fraction, examples, source, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", null);
+				Driver.runAlgorithm(source, target, 4, 1, fraction, examples, source, null, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", null);
 		
 		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(result.first.first, ba);
 		System.out.println(repairSFT.toDotString(ba));
@@ -254,7 +254,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", "escapeQuotesSynth");
+				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, null, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", "escapeQuotesSynth");
 	}
 	
 	

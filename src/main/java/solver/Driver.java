@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -107,7 +108,7 @@ public class Driver {
 	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
-			SFA<CharPred, Character> template, String filename, String benchmarkName) throws TimeoutException, IOException {
+			SFA<CharPred, Character> template, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, String filename, String benchmarkName) throws TimeoutException, IOException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
         cfg.put("model", "true");
         Context ctx = new Context(cfg);
@@ -142,7 +143,7 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, config, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 		mySFT = res.first;
 		solvingTime1 = res.second;
@@ -153,7 +154,7 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, null, ba);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, null, config, ba);
 			res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
