@@ -19,7 +19,7 @@ public class RunSingleBenchmark {
 		    br.write("Running benchmark\n");
 		    br.close();
 			
-		    RunBenchmarks.runBenchmark("src/test/java/benchmarks/Benchmarks/" + benchmark, benchmark);
+		    RunBenchmarks.runBenchmark("src/test/java/benchmarks/Benchmarks/" + benchmark, benchmark, null);
 		    
 		} catch (Exception e) {
 			e.printStackTrace();
