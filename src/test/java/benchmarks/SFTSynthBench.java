@@ -123,7 +123,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("ab\\ab", "ab\\ab"));
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, null, null, "src/test/java/benchmarks/Outputs/escapeQuotes_out", "escapeQuotesSynth");
 	}
 	
@@ -217,7 +217,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("a\\\\\\\\a", "a\\\\a"));
 		// examples.add(new Pair<String, String>("a\\", "a\\"));
 		
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, 4, 1, fraction, examples, source, null, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", null);
 		
 		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(result.first.first, ba);
@@ -253,7 +253,7 @@ public class SFTSynthBench {
 		examples.add(new Pair<String, String>("a\\a", "a\\a"));
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, null, null, "src/test/java/benchmarks/Outputs/escapeQuotesFinite_out", "escapeQuotesSynth");
 	}
 	

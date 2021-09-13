@@ -159,11 +159,132 @@ public class SFAOperations {
 		return false;
 	}
 	
+	/**
+	 * Make finite automata from the minterms of both aut1 and aut2
+	 * 
+	 * @throws TimeoutException
+	 */
+	@SuppressWarnings("unchecked")
+	public static Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>>
+	MkFiniteSFA(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2, BooleanAlgebra<CharPred, Character> ba) 
+			throws TimeoutException {
+		
+		// Get all predicates
+		ArrayList<CharPred> predicates1 = new ArrayList<CharPred>(); 
+		ArrayList<CharPred> predicates2 = new ArrayList<CharPred>(); 
+		 
+		for (Integer state : aut1.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+				predicates1.add(transition.guard);
+			}
+		}
+		
+		for (Integer state : aut2.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut2.getInputMovesFrom(state)) {
+				predicates2.add(transition.guard);
+			}
+		}
+		
+		predicates1.addAll(predicates2);
+		
+		// Get minterms
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predicates1);
+		Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId = new HashMap<Pair<CharPred, ArrayList<Integer>>, CharPred>();
+		Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = new HashMap<CharPred, Pair<CharPred, ArrayList<Integer>>>();
+		for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+			CharPred newPred = ba.MkAtom(ba.generateWitness(minterm.first));
+			mintermToId.put(minterm, newPred);
+			idToMinterm.put(newPred, minterm);
+		}
+		
+		// Make new transitions
+		Collection<SFAMove<CharPred, Character>> transitions1 = new ArrayList<SFAMove<CharPred, Character>>();
+		Collection<SFAMove<CharPred, Character>> transitions2 = new ArrayList<SFAMove<CharPred, Character>>();
+		
+		for (Integer state : aut1.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+				for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+					CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+					if (ba.IsSatisfiable(conj)) {
+						SFAInputMove<CharPred, Character> newTransition = (SFAInputMove<CharPred, Character>) transition.clone();
+						newTransition.guard = mintermToId.get(minterm);
+						transitions1.add(newTransition);
+					}
+				}
+			}
+		}
+		
+		SFA<CharPred, Character> finAut1 = SFA.MkSFA(transitions1, aut1.getInitialState(), aut1.getFinalStates(), ba, false, false);
+		
+		for (Integer state : aut2.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut2.getInputMovesFrom(state)) {
+				for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+					CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+					if (ba.IsSatisfiable(conj)) {
+						SFAInputMove<CharPred, Character> newTransition = (SFAInputMove<CharPred, Character>) transition.clone();
+						newTransition.guard = mintermToId.get(minterm);
+						transitions2.add(newTransition);
+					}
+				}
+			}
+		}
+		
+		SFA<CharPred, Character> finAut2 = SFA.MkSFA(transitions2, aut2.getInitialState(), aut2.getFinalStates(), ba, false, false);
+		
+		return new Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>>(finAut1, finAut2, idToMinterm);
+	}
+	
+	/**
+	 * Variant of MkFiniteSFA that optionally accepts minterms
+	 * 
+	 * @param aut1
+	 * @param ba
+	 * @return
+	 * @throws TimeoutException 
+	 */
+	public static SFA<CharPred, Character> MkFiniteSFA(SFA<CharPred, Character> aut1, 
+			Collection<Pair<CharPred, ArrayList<Integer>>> minterms, 
+			Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		// Make new transitions
+		Collection<SFAMove<CharPred, Character>> transitions1 = new ArrayList<SFAMove<CharPred, Character>>();
+
+		for (Integer state : aut1.getStates()) {
+			for (SFAInputMove<CharPred, Character> transition : aut1.getInputMovesFrom(state)) {
+				for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+					CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+					if (ba.IsSatisfiable(conj)) {
+						SFAInputMove<CharPred, Character> newTransition = (SFAInputMove<CharPred, Character>) transition.clone();
+						newTransition.guard = mintermToId.get(minterm);
+						transitions1.add(newTransition);
+					}
+				}
+			}
+		}
+
+		SFA<CharPred, Character> finAut1 = SFA.MkSFA(transitions1, aut1.getInitialState(), aut1.getFinalStates(), ba, false, false);
+				
+		return finAut1;
+	}
+	
+	public static Pair<Map<Pair<CharPred, ArrayList<Integer>>, CharPred>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> 
+	constructMintermMap(Collection<Pair<CharPred, ArrayList<Integer>>> minterms, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
+		Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId = new HashMap<Pair<CharPred, ArrayList<Integer>>, CharPred>();
+		Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = new HashMap<CharPred, Pair<CharPred, ArrayList<Integer>>>();
+		for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+			CharPred newPred = ba.MkAtom(ba.generateWitness(minterm.first));
+			mintermToId.put(minterm, newPred);
+			idToMinterm.put(newPred, minterm);
+		}
+		
+		return new Pair<Map<Pair<CharPred, ArrayList<Integer>>, CharPred>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>>(mintermToId, idToMinterm);
+	}
+	
 	/* Calls mintermReduction, implemented in symbolicautomata */
 	public static Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> 
 	mkFinite(SFA<CharPred, Character> aut1, SFA<CharPred, Character> aut2, BooleanAlgebra<CharPred, Character> ba) throws TimeoutException {
 		return SFA.MkFiniteSFA(aut1, aut2, ba);
 	}
+	
 	
 	public static List<CharPred> getPreds(SFA<CharPred, Character> aut) {
 		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 

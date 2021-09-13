@@ -105,7 +105,7 @@ public class Driver {
 	}
 
 	
-	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
+	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
 			SFA<CharPred, Character> template, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, String filename, String benchmarkName) throws TimeoutException, IOException {
@@ -114,13 +114,28 @@ public class Driver {
         Context ctx = new Context(cfg);
 		
 		// Make finite automata out of source and target
-		Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
-				SFA.MkFiniteSFA(source, target, ba);
-		
-		SFA<CharPred, Character> sourceFinite = triple.first;
-		SFA<CharPred, Character> targetFinite = triple.second;
-		
-		Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = triple.third;
+        SFA<CharPred, Character> sourceFinite = null;
+        SFA<CharPred, Character> targetFinite = null;
+        
+        Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId = null;
+        Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm = null;
+        if (minterms == null) {
+        	Triple<SFA<CharPred, Character>, SFA<CharPred, Character>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> triple = 
+        			SFA.MkFiniteSFA(source, target, ba);
+
+        	sourceFinite = triple.first;
+        	targetFinite = triple.second;
+
+        	idToMinterm = triple.third;
+        } else {
+        	Pair<Map<Pair<CharPred, ArrayList<Integer>>, CharPred>, Map<CharPred, Pair<CharPred, ArrayList<Integer>>>> mintermMaps =
+        			SFAOperations.constructMintermMap(minterms, ba);
+        	mintermToId = mintermMaps.first;
+        	idToMinterm = mintermMaps.second;
+        	
+        	sourceFinite = SFAOperations.MkFiniteSFA(source, minterms, mintermToId, ba);
+        	targetFinite = SFAOperations.MkFiniteSFA(target, minterms, mintermToId, ba);
+        }
 		
 		List<Pair<String, String>> examplesFinite = finitizeExamples(examples, idToMinterm);
 		
@@ -143,7 +158,7 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, config, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, idToMinterm, config, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 		mySFT = res.first;
 		solvingTime1 = res.second;
@@ -154,7 +169,7 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, null, config, ba);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, idToMinterm, config, ba);
 			res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
@@ -163,13 +178,13 @@ public class Driver {
 		long time2 = (stopTime - startTime) / 1000000;
 		
 		// Call minterm expansion
-		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third, ba);
+		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, idToMinterm, ba);
 		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded, ba).domainRestriction(source, ba);
 		
 		SFT<CharPred, CharFunc, Character> mySFT2expanded = null;
 		SFT<CharPred, CharFunc, Character> mySFT2restricted = null;
 		if (mySFT2 != null) {
-			mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, triple.third, ba);
+			mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, idToMinterm, ba);
 			mySFT2restricted = SFTOperations.mkAllStatesFinal(mySFT2expanded, ba).domainRestriction(source, ba);
 		}
 		
@@ -226,6 +241,8 @@ public class Driver {
 			
 			if (mySFTrestricted.getTransitions().size() != 0) {
 				br.write("First SFT:\n");
+				br.write(mySFTexpanded.toDotString(ba) + "\n");
+				br.write("First SFT restricted:\n");
 				br.write(mySFTrestricted.toDotString(ba) + "\n");
 				br.write("Synthesis time: " + time1 + "\n");
 			} else {
@@ -234,6 +251,8 @@ public class Driver {
 			
 			if (witness != null) {
 				br.write("Second SFT:\n");
+				br.write(mySFT2expanded.toDotString(ba) + "\n");
+				br.write("Second SFT restricted:\n");
 				br.write(mySFT2restricted.toDotString(ba) + "\n");
 				br.write("Synthesis time: " + time2 + "\n");
 
@@ -252,9 +271,11 @@ public class Driver {
 			br.close();
 		}
 		
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTrestricted, time1);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2restricted, time2);
-		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
+		Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>> pair1 = 
+				new Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>>(mySFTexpanded, mySFTrestricted);
+		Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>> pair2 = 
+				new Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>>(mySFT2expanded, mySFT2restricted);
+		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred,CharFunc,Character>>, String>(pair1, pair2, witness);
 	}
 }
 

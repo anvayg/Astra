@@ -130,17 +130,16 @@ public class RunBenchmarks {
 		br.write(benchmarkName + "\n");
 		
 		// Call solver
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
 	}
 	
 	
 	/* Repairing from the input */
-	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
-	runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, int outputBound, int[] fraction, 
-			List<Pair<String, String>> examples, SFA<CharPred, Character> template, String benchmarkName, 
-			String outputFilename) throws TimeoutException, IOException {
+	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
+			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
+			String benchmarkName, String outputFilename) throws TimeoutException, IOException {
 
 		if (outputFilename == null) {
 			outputFilename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
@@ -169,11 +168,11 @@ public class RunBenchmarks {
 		target = unnormalized.second;
 		// System.out.println(target.toDotString(ba));
 		
-		// TODO: Change driver to be able to use provided minterms
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
+		// Run algorithm
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
-		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
+		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
+		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second is the pair is the restricted SFT
 		String witness = result.third;
 
 		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.unionWith(mySFT, ba);
@@ -190,33 +189,32 @@ public class RunBenchmarks {
 			br.write(mySFT2repair.toDotString(ba));
 		}
 		br.close();
-
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTrepair, result.first.second);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2repair, result.second.second);
-		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
 	}
 	
 	
 	/* Repairing from the output language */
-	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> 
-	runRepairBenchmarkOutput(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
-			String benchmarkName) throws TimeoutException, IOException {
+	public static void runRepairBenchmarkOutput(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
+			SFA<CharPred, Character> template, String benchmarkName, String outputFilename) throws TimeoutException, IOException {
 		
-		String filename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
-		BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename)));
+		if (outputFilename == null) {
+			outputFilename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
+		} else {
+			outputFilename = "src/test/java/benchmarks/RepairBenchmarks/" + outputFilename;
+		}
+		BufferedWriter br = new BufferedWriter(new FileWriter(new File(outputFilename)));
 		br.write("Running benchmark\n");
 		br.close();
-		Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, filename, benchmarkName);
-		SFT<CharPred, CharFunc, Character> mySFT = result.first.first;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.first;
+		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
+		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
+		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second is the pair is the restricted SFT
 		String witness = result.third;
 
 		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.composeWith(mySFT, ba);
 		System.out.println(mySFTrepair.toDotString(ba));
 
-		br = new BufferedWriter(new FileWriter(new File(filename), true));
+		br = new BufferedWriter(new FileWriter(new File(outputFilename), true));
 		br.write("SFTrepair1:\n");
 		br.write(mySFTrepair.toDotString(ba));
 
@@ -227,10 +225,6 @@ public class RunBenchmarks {
 			br.write(mySFT2repair.toDotString(ba));
 		}
 		br.close();
-
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair1 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFTrepair, result.first.second);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> pair2 = new Pair<SFT<CharPred, CharFunc, Character>, Long>(mySFT2repair, result.second.second);
-		return new Triple<Pair<SFT<CharPred, CharFunc, Character>, Long>, Pair<SFT<CharPred, CharFunc, Character>, Long>, String>(pair1, pair2, witness);
 	}
 
 	public static void main(String[] args) throws TimeoutException {
