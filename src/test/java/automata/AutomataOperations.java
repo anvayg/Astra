@@ -131,10 +131,10 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	}
 	
 	public static void getOutputTest() throws TimeoutException {
-		String outputStr = SFTOperations.getOutputString(mySFT01, "a", ba);
+		String outputStr = SFTOperations.getOutputString(mySFT01, "a");
 		assertTrue(outputStr.equals("b"));
 		
-		outputStr = SFTOperations.getOutputString(mySFT01, "aa", ba);
+		outputStr = SFTOperations.getOutputString(mySFT01, "aa");
 		assertTrue(outputStr.equals("bb"));
 	}
 	

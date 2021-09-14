@@ -99,7 +99,7 @@ public class Driver {
 					return null;
 				}
 			} else {
-				return SFTOperations.mintermExpansion(mySFT, triple.third, ba);
+				return SFTOperations.mintermExpansion(mySFT, triple.third);
 			}
 		}
 	}
@@ -178,19 +178,20 @@ public class Driver {
 		long time2 = (stopTime - startTime) / 1000000;
 		
 		// Call minterm expansion
-		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, idToMinterm, ba);
-		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded, ba).domainRestriction(source, ba);
+		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, idToMinterm);
+		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded).domainRestriction(source, ba);
 		
 		SFT<CharPred, CharFunc, Character> mySFT2expanded = null;
 		SFT<CharPred, CharFunc, Character> mySFT2restricted = null;
 		if (mySFT2 != null) {
-			mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, idToMinterm, ba);
-			mySFT2restricted = SFTOperations.mkAllStatesFinal(mySFT2expanded, ba).domainRestriction(source, ba);
+			mySFT2expanded = SFTOperations.mintermExpansion(mySFT2, idToMinterm);
+			mySFT2restricted = SFTOperations.mkAllStatesFinal(mySFT2expanded).domainRestriction(source, ba);
 		}
 		
 		if (mySFT2restricted != null) {
 			System.out.println(mySFTexpanded.toDotString(ba));
 			System.out.println(mySFTrestricted.toDotString(ba));
+			System.out.println(mySFT2expanded.toDotString(ba));
 			System.out.println(mySFT2restricted.toDotString(ba));
 			// Check equality of expanded transducers
 			if (!SFT.decide1equality(mySFTrestricted, mySFT2restricted, ba)) {
@@ -204,6 +205,7 @@ public class Driver {
 					witness = sb.toString();
 				} catch(Exception e) {
 					// TODO
+					System.out.println(e);
 				}
 			}
 		}
@@ -230,7 +232,7 @@ public class Driver {
 			}
 			
 			for (Pair<String, String> example : examples) {
-	        	String exampleOutput = SFTOperations.getOutputString(mySFTrestricted, example.first, ba);
+	        	String exampleOutput = SFTOperations.getOutputString(mySFTrestricted, example.first);
 	        	try {
 	        		assertTrue(exampleOutput.equals(example.second));
 	        	} catch (AssertionError error) {
@@ -256,8 +258,8 @@ public class Driver {
 				br.write(mySFT2restricted.toDotString(ba) + "\n");
 				br.write("Synthesis time: " + time2 + "\n");
 
-				String witnessOutput1 = SFTOperations.getOutputString(mySFTrestricted, witness, ba);
-				String witnessOutput2 = SFTOperations.getOutputString(mySFT2restricted, witness, ba);
+				String witnessOutput1 = SFTOperations.getOutputString(mySFTrestricted, witness);
+				String witnessOutput2 = SFTOperations.getOutputString(mySFT2restricted, witness);
 
 				br.write("Input on which SFTs differ: " + witness + "\n");
 				br.write("Output1: " + witnessOutput1 + "\n");

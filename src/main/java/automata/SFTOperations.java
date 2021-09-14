@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -239,8 +240,63 @@ public class SFTOperations {
 		
 		currentTransitions.removeAll(transitions);
 		
-		return SFT.MkSFT(currentTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba); 	// TODO: change
+		return SFT.MkSFT(currentTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba);
 	}
+	
+	/* Returns the domain common to 2 SFTs */
+	public static Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>> computeUnchangedDomain(SFT<CharPred, CharFunc, Character> trans, 
+			SFT<CharPred, CharFunc, Character> modTrans) throws TimeoutException {
+		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : trans.getStates()) {
+			transitions.addAll(trans.getInputMovesFrom(state));
+		}
+
+		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> modTransitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : modTrans.getStates()) {
+			modTransitions.addAll(modTrans.getInputMovesFrom(state));
+		}
+
+		LinkedList<SFTMove<CharPred, CharFunc, Character>> unchangedTransitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		for (SFTInputMove<CharPred, CharFunc, Character> transition : transitions) {
+			if (modTransitions.contains(transition)) {
+				unchangedTransitions.add(transition);
+			}
+		}
+
+		SFT<CharPred, CharFunc, Character> unchangedSFT = SFT.MkSFT(unchangedTransitions, trans.getInitialState(), trans.getFinalStatesAndTails(), ba);
+
+		return new Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>>(unchangedSFT, unchangedSFT.getDomain(ba));
+	}
+	
+	
+	public static Collection<SFTMove<CharPred, CharFunc, Character>> computeDiffTransitions(SFT<CharPred, CharFunc, Character> trans, 
+			SFT<CharPred, CharFunc, Character> modTrans) throws TimeoutException {
+		Collection<SFTMove<CharPred, CharFunc, Character>> diffTransitions = new ArrayList<SFTMove<CharPred, CharFunc, Character>>();
+		
+		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : trans.getStates()) {
+			transitions.addAll(trans.getInputMovesFrom(state));
+		}
+
+		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> modTransitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : modTrans.getStates()) {
+			modTransitions.addAll(modTrans.getInputMovesFrom(state));
+		}
+		
+		for (SFTInputMove<CharPred, CharFunc, Character> transition : modTransitions) {
+			if (!transitions.contains(transition)) {
+				diffTransitions.add(transition);
+			}
+		}
+		
+		return diffTransitions;
+	}
+	
 	
 	/* String from List of Chars */
 	public static String sOfL(List<Character> l) {

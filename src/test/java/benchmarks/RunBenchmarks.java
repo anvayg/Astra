@@ -22,6 +22,7 @@ import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
+import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.SFAprovider;
 import utilities.Triple;
@@ -63,7 +64,7 @@ public class RunBenchmarks {
 		
 		BufferedWriter br = new BufferedWriter(new FileWriter(new File("src/test/java/benchmarks/tmpOutput")));
 		for (Pair<String, String> example : examples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first);
         	try {
         		assertTrue(exampleOutput.equals(example.second));
         	} catch (AssertionError error) {
@@ -136,7 +137,8 @@ public class RunBenchmarks {
 	
 	
 	/* Repairing from the input */
-	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, 
+	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, 
+			Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
 			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
 			String benchmarkName, String outputFilename) throws TimeoutException, IOException {
@@ -150,13 +152,16 @@ public class RunBenchmarks {
 		br.write("Running benchmark\n");
 		br.close();
 		
-		if (source == null) {
-			// Take the preimage
-			SFA<CharPred, Character> preimage = aut.inverseImage(target, ba);
-			source = aut.getDomain(ba).minus(preimage, ba).determinize(ba);
+		if (source == null) {	// Note: not doing preimage computation as of now
+			SFA<CharPred, Character> inputLang = aut.getDomain(ba);
 			
-			// Restrict aut to 'good' subset of input (i.e. the preimage)
-			aut = aut.domainRestriction(preimage, ba);
+			// remove badTransitions from aut
+			aut = SFTOperations.removeTransitions(aut, badTransitions);
+			
+			// compute source = original input - correct input
+			SFA<CharPred, Character> correctInputSet = aut.getDomain(ba);
+			source = inputLang.minus(correctInputSet, ba);
+			System.out.println(source.toDotString(ba));
 		}
 			// else assume that aut is already restricted
 		
@@ -164,9 +169,7 @@ public class RunBenchmarks {
 		// Un-normalize source and target using minterms
 		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
 		source = unnormalized.first;
-		System.out.println(source.toDotString(ba));
 		target = unnormalized.second;
-		// System.out.println(target.toDotString(ba));
 		
 		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
