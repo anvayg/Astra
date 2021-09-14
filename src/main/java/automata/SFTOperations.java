@@ -20,6 +20,7 @@ import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
 import theory.characters.CharPred;
+import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 import transducers.sft.SFTEpsilon;
 import transducers.sft.SFTInputMove;
@@ -28,13 +29,14 @@ import utilities.Pair;
 
 public class SFTOperations {
 	
+	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
+	
 	/* 
 	 * Returns output string given a transducer and an input string. Assumes the alphabet of
 	 * trans includes the character in inputStr. This function is meant for a finite 
 	 * transducer, i.e., where the output functions are constants.
 	 */
-	public static String getOutputString(SFT<CharPred, CharFunc, Character> trans, String inputStr, 
-			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+	public static String getOutputString(SFT<CharPred, CharFunc, Character> trans, String inputStr) throws TimeoutException {
 		StringBuilder outputStr = new StringBuilder("");
 		Integer state = trans.getInitialState();
 		
@@ -78,8 +80,7 @@ public class SFTOperations {
 	}
 	
 	private static <P, F, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
-			Integer currentState, List<S> input, int position,
-			BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
+			Integer currentState, List<S> input, int position, BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
 		if (position > input.size())
 			return;
@@ -126,8 +127,7 @@ public class SFTOperations {
 		return predicates;
 	}
 	
-	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut, 
-			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+	public static Collection<Pair<CharPred, ArrayList<Integer>>> getMinterms(SFT<CharPred, CharFunc, Character> aut) {
 		// Get all predicates
 		ArrayList<CharPred> predicates = new ArrayList<CharPred>(); 
 
@@ -145,7 +145,7 @@ public class SFTOperations {
 	
 	/* Performs minterm expansion */
 	public static SFT<CharPred, CharFunc, Character> mintermExpansion(SFT<CharPred, CharFunc, Character> trans,
-			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm) throws TimeoutException {
 		Collection<SFTMove<CharPred, CharFunc, Character>> newTransitions = new ArrayList<SFTMove<CharPred, CharFunc, Character>>();
 		
 		for (Integer state : trans.getStates()) {
@@ -199,7 +199,7 @@ public class SFTOperations {
 	
 	
 	/* Makes all states final */
-	public static SFT<CharPred, CharFunc, Character> mkAllStatesFinal(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+	public static SFT<CharPred, CharFunc, Character> mkAllStatesFinal(SFT<CharPred, CharFunc, Character> trans) throws TimeoutException {
 		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
 		Collection<Integer> states = trans.getStates();
 		
@@ -211,14 +211,14 @@ public class SFTOperations {
 	}
 	
 	/* Remove final states */
-	public static SFT<CharPred, CharFunc, Character> removeFinalStates(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+	public static SFT<CharPred, CharFunc, Character> removeFinalStates(SFT<CharPred, CharFunc, Character> trans) throws TimeoutException {
 		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
 		
 		return SFT.MkSFT(trans.getTransitions(), trans.getInitialState(), finStatesAndTails, ba);
 	}
 	
 	/* Variant of getDomain that does not normalize */
-	public static SFA<CharPred, Character> getDomain(SFT<CharPred, CharFunc, Character> trans, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+	public static SFA<CharPred, Character> getDomain(SFT<CharPred, CharFunc, Character> trans) throws TimeoutException {
 		Collection<SFAMove<CharPred, Character>> transitions = new ArrayList<SFAMove<CharPred, Character>>();
 
 		for (SFTInputMove<CharPred, CharFunc, Character> t : trans.getInputMovesFrom(trans.getStates()))
@@ -230,6 +230,16 @@ public class SFTOperations {
 		Collection<Integer> finalStates = trans.getFinalStates();
 
 		return SFA.MkSFA(transitions, trans.getInitialState(), finalStates, ba, false, false);
+	}
+	
+	/* Remove a set of transitions from an SFT */
+	public static SFT<CharPred, CharFunc, Character> removeTransitions(SFT<CharPred, CharFunc, Character> aut, 
+			Collection<SFTMove<CharPred, CharFunc, Character>> transitions) throws TimeoutException {
+		Collection<SFTMove<CharPred, CharFunc, Character>> currentTransitions = aut.getTransitions();
+		
+		currentTransitions.removeAll(transitions);
+		
+		return SFT.MkSFT(currentTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba); 	// TODO: change
 	}
 	
 	/* String from List of Chars */

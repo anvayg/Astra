@@ -106,7 +106,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, fraction, ioExamples, template, null, smtFile, debug).first;
 		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first);
             assertTrue(exampleOutput.equals(example.second));
         }
 		
@@ -134,7 +134,7 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(smtFile, debug).first;
 		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first);
             assertTrue(exampleOutput.equals(example.second));
         }
 		

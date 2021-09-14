@@ -102,7 +102,7 @@ public class ConstraintsTestBoundedEdits {
 		SFT<CharPred, CharFunc, Character> mySFT = c.mkConstraints(numStates, outputBound, numEdits, ioExamples, template, smtFile, debug);
 		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first);
             assertTrue(exampleOutput.equals(example.second));
         }
 		

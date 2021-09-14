@@ -221,11 +221,11 @@ public class ConstraintsTestSymbolic {
 		}
 		
 		// Call minterm expansion
-		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third, ba);
+		SFT<CharPred, CharFunc, Character> mySFTexpanded = SFTOperations.mintermExpansion(mySFT, triple.third);
 		System.out.println(mySFTexpanded.toDotString(ba));
 		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFTexpanded, example.first);
         	System.out.println(exampleOutput);
         	assertTrue(exampleOutput.equals(example.second));
         }
@@ -294,7 +294,7 @@ public class ConstraintsTestSymbolic {
 		SFT<CharPred, CharFunc, Character> mySFTexpanded = FSTOperations.mintermExpansion(nonDetFT, triple.third, ba);
 		System.out.println(mySFTexpanded.toDotString(ba));
 		
-		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded, ba);
+		SFT<CharPred, CharFunc, Character> mySFTrestricted = SFTOperations.mkAllStatesFinal(mySFTexpanded);
 		
 		for (Pair<String, String> example : ioExamples) {
         	List<String> exampleOutputs = SFTOperations.getAllOutputs(mySFTrestricted, example.first, ba);

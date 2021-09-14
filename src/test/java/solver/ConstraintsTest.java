@@ -212,7 +212,7 @@ public class ConstraintsTest {
 		}
 		
 		for (Pair<String, String> example : ioExamples) {
-        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first, ba);
+        	String exampleOutput = SFTOperations.getOutputString(mySFT, example.first);
             assertTrue(exampleOutput.equals(example.second));
         }
 		
@@ -306,10 +306,10 @@ public class ConstraintsTest {
         SFT<CharPred, CharFunc, Character> synthSFT = customConstraintsTest(ctx, mySFA09, mySFA10, 3, 2, fraction, examples, null, "int", null, false);
         System.out.println(synthSFT.toDotString(ba));
         
-        String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;", ba);
+        String exampleOutput1 = SFTOperations.getOutputString(synthSFT, "b;");
         assertTrue(exampleOutput1.equals(";"));
         
-        String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;", ba);
+        String exampleOutput2 = SFTOperations.getOutputString(synthSFT, "a;");
         assertTrue(exampleOutput2.equals("a;"));
 	}
 	
