@@ -128,8 +128,9 @@ public class RunBenchmarks {
 			outputFilename = "src/test/java/benchmarks/Outputs/" + outputFilename;
 		}
 		// Open output file
-		BufferedWriter br = new BufferedWriter(new FileWriter(new File(outputFilename), true));
+		BufferedWriter br = new BufferedWriter(new FileWriter(new File(outputFilename)));
 		br.write(benchmarkName + "\n");
+		br.close();
 		
 		// Call solver
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
