@@ -40,8 +40,8 @@ public class FSTOperations {
 					if (c.equals(f)) {
 						output.add(CharOffset.IDENTITY); // identity if input/output minterms are the same
 					} else {
-						CharPred inputMinterm = SFAOperations.findSatisfyingMinterm(c, idToMinterm);
-						CharPred outputMinterm = SFAOperations.findSatisfyingMinterm(f, idToMinterm);
+						CharPred inputMinterm = SFAOperations.findSatisfyingMinterm(c, idToMinterm).first;
+						CharPred outputMinterm = SFAOperations.findSatisfyingMinterm(f, idToMinterm).first;
 
 						if (inputMinterm.intervals.size() == 1 && outputMinterm.intervals.size() == 1) {
 							ImmutablePair<Character, Character> inputInterval = inputMinterm.intervals.get(0);

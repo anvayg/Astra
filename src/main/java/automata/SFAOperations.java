@@ -433,12 +433,12 @@ public class SFAOperations {
 		return new Pair<SFA<CharPred, Character>, SFA<CharPred, Character>>(finAut1, finAut2); 
 	}
 	
-	public static CharPred findSatisfyingMinterm(Character c, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm) throws TimeoutException {
+	public static Pair<CharPred, ArrayList<Integer>> findSatisfyingMinterm(Character c, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm) throws TimeoutException {
 		for (Map.Entry<CharPred, Pair<CharPred, ArrayList<Integer>>> entry : idToMinterm.entrySet()) {
 			CharPred minterm = entry.getValue().first;
 			
 			if (minterm.isSatisfiedBy(c)) { 	// only 1 minterm should be satisfied, since they are disjoint
-				 return minterm;
+				 return entry.getValue();
 			}
 		}
 		

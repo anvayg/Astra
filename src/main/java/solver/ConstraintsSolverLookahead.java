@@ -838,7 +838,7 @@ public class ConstraintsSolverLookahead {
 			Set<Character> multipleChars = new HashSet<Character>();
 			
 			for (Character a : alphabet) {
-				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms);
+				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms).first;
 				if (minterm.intervals.size() == 1) {
 					ImmutablePair<Character, Character> interval = minterm.intervals.get(0);
 					if (interval.right - interval.left == 0) {

@@ -12,6 +12,8 @@ import java.util.Set;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 
+import automata.fst.FST;
+import automata.fst.FSTMove;
 import automata.sfa.SFA;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
@@ -167,8 +169,8 @@ public class SFTOperations {
 							if (c.equals(out)) {
 								output.add(CharOffset.IDENTITY); // identity if input/output minterms are the same
 							} else {
-								CharPred inputMinterm = SFAOperations.findSatisfyingMinterm(c, idToMinterm);
-								CharPred outputMinterm = SFAOperations.findSatisfyingMinterm(out, idToMinterm);
+								CharPred inputMinterm = SFAOperations.findSatisfyingMinterm(c, idToMinterm).first;
+								CharPred outputMinterm = SFAOperations.findSatisfyingMinterm(out, idToMinterm).first;
 								
 								if (inputMinterm.intervals.size() == 1 && outputMinterm.intervals.size() == 1) {
 									ImmutablePair<Character, Character> inputInterval = inputMinterm.intervals.get(0);
@@ -275,7 +277,7 @@ public class SFTOperations {
 		return new Pair<SFT<CharPred, CharFunc, Character>, SFA<CharPred, Character>>(unchangedSFT, unchangedSFT.getDomain(ba));
 	}
 	
-	
+	/* Returns the set of transitions that have been altered from trans to modTrans */
 	public static Collection<SFTInputMove<CharPred, CharFunc, Character>> computeDiffTransitions(SFT<CharPred, CharFunc, Character> trans, 
 			SFT<CharPred, CharFunc, Character> modTrans) throws TimeoutException {
 		Collection<SFTInputMove<CharPred, CharFunc, Character>> diffTransitions = new ArrayList<SFTInputMove<CharPred, CharFunc, Character>>();
@@ -301,6 +303,74 @@ public class SFTOperations {
 		return diffTransitions;
 	}
 	
+	/* Finitize SFT to FST */
+	public static FST<Character, Character> mkFinite(SFT<CharPred, CharFunc, Character> aut, 
+			Collection<Pair<CharPred, ArrayList<Integer>>> minterms,
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm,
+			Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId) throws TimeoutException {
+		Collection<FSTMove<Character, Character>> transitions = new ArrayList<FSTMove<Character, Character>>();
+		
+		for (Integer state : aut.getStates()) {
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : aut.getInputMovesFrom(state)) {
+				for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+					CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+					if (ba.IsSatisfiable(conj)) {
+						Character input = ba.generateWitness(mintermToId.get(minterm)); 	// should be one witness
+						
+						// Obtain outputs
+						List<Character> outputs = new ArrayList<Character>();
+						for (CharFunc f : transition.outputFunctions) {
+							// use instantiate, then find satisfying minterm, and then reduce
+							Character out = f.instantiateWith(input);
+							Pair<CharPred, ArrayList<Integer>> satMinterm = SFAOperations.findSatisfyingMinterm(out, idToMinterm);
+							
+							outputs.add(ba.generateWitness(mintermToId.get(satMinterm)));
+						}
+						
+						// add transition
+						FSTMove<Character, Character> newTransition = 
+								new FSTMove<Character, Character>(transition.from, transition.to, input, outputs);
+						transitions.add(newTransition);
+					}
+				}
+			}
+		}
+		
+		return FST.MkFST(transitions, aut.getInitialState(), aut.getFinalStates());
+	}
+	
+	/* Finite set of SFT transitions */
+	public static Collection<FSTMove<Character, Character>> mkTransitionsFinite(Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions, 
+			Collection<Pair<CharPred, ArrayList<Integer>>> minterms,
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> idToMinterm,
+			Map<Pair<CharPred, ArrayList<Integer>>, CharPred> mintermToId) throws TimeoutException {
+		Collection<FSTMove<Character, Character>> newTransitions = new ArrayList<FSTMove<Character, Character>>();
+		
+		for (SFTInputMove<CharPred, CharFunc, Character> transition : transitions) {
+			for (Pair<CharPred, ArrayList<Integer>> minterm : minterms) {
+				CharPred conj = ba.MkAnd(transition.guard, minterm.first);
+				if (ba.IsSatisfiable(conj)) {
+					Character input = ba.generateWitness(mintermToId.get(minterm)); 	// should be one witness
+					
+					// Obtain outputs
+					List<Character> outputs = new ArrayList<Character>();
+					for (CharFunc f : transition.outputFunctions) {
+						Character out = f.instantiateWith(input);
+						Pair<CharPred, ArrayList<Integer>> satMinterm = SFAOperations.findSatisfyingMinterm(out, idToMinterm);
+						
+						outputs.add(ba.generateWitness(mintermToId.get(satMinterm)));
+					}
+					
+					// add transition
+					FSTMove<Character, Character> newTransition = 
+							new FSTMove<Character, Character>(transition.from, transition.to, input, outputs);
+					newTransitions.add(newTransition);
+				}
+			}
+		}
+		
+		return newTransitions;
+	}
 	
 	/* String from List of Chars */
 	public static String sOfL(List<Character> l) {

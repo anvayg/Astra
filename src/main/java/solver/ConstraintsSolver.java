@@ -30,6 +30,8 @@ import com.microsoft.z3.Symbol;
 import com.microsoft.z3.TupleSort;
 
 import automata.SFAOperations;
+import automata.fst.FSTMove;
+import automata.fst.FSTTemplate;
 import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import theory.BooleanAlgebraSubst;
@@ -54,6 +56,7 @@ public class ConstraintsSolver {
 	int[] distance;
 	List<Pair<String, String>> ioExamples;
 	SFA<CharPred, Character> template;
+	FSTTemplate ftTemplate;
 	SFT<CharPred, CharFunc, Character> solution;
 	Set<Character> alphabet;
 	HashMap<Character, Integer> alphabetMap;
@@ -97,10 +100,12 @@ public class ConstraintsSolver {
 	
 	/* Constructor */
 	public ConstraintsSolver(Context ctx, SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			HashMap<Character, Integer> alphabetMap, int numStates, int outputBound, List<Pair<String, String>> ioExamples, 
+			HashMap<Character, Integer> alphabetMap, int numStates, int outputBound, 
+			List<Pair<String, String>> ioExamples, 
 			String distanceType, int[] distance, SFA<CharPred, Character> template, 
-			SFT<CharPred, CharFunc, Character> solution, Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, 
-			ArrayList<Boolean> config, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
+			FSTTemplate ftTemplate, SFT<CharPred, CharFunc, Character> solution, 
+			Map<CharPred, Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, 
+			BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) {
 		this.ctx = ctx;
 		this.solver = ctx.mkSolver();
 		this.source = source;
@@ -112,6 +117,7 @@ public class ConstraintsSolver {
 		this.distanceType = distanceType;
 		this.distance = distance;
 		this.template = template;
+		this.ftTemplate = ftTemplate;
 		this.solution = solution;
 		this.alphabetMap = alphabetMap;
 		this.idToMinterms = minterms;
@@ -884,7 +890,7 @@ public class ConstraintsSolver {
 			Set<Character> multipleChars = new HashSet<Character>();
 			
 			for (Character a : alphabet) {
-				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms);
+				CharPred minterm = SFAOperations.findSatisfyingMinterm(a, idToMinterms).first;
 				if (minterm.intervals.size() == 1) {
 					ImmutablePair<Character, Character> interval = minterm.intervals.get(0);
 					if (interval.right - interval.left == 0) {
@@ -923,7 +929,7 @@ public class ConstraintsSolver {
 		if (template != null) {
 			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
 				Integer stateFrom = transition.from;
-				Character move = transition.getWitness(ba);
+				Character move = transition.getWitness(ba);		// TODO: template and sftTemplate need to be minterm reduced
 				Integer stateTo = transition.to;
 				
 				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
@@ -931,6 +937,27 @@ public class ConstraintsSolver {
 				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
+			}
+		}
+		
+		/* Enforce the d1 and d2 relations of the good transitions of the template */
+		if (ftTemplate != null) {
+			Collection<FSTMove<Character, Character>> goodTransitions = ftTemplate.getGoodTransitions();
+			
+			for (FSTMove<Character, Character> transition : goodTransitions) {
+				Integer stateFrom = transition.from;
+				Character input = transition.input;
+				Integer stateTo = transition.to;
+				
+				/* d2 */
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				
+				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
+				
+				/* TODO d1 */
+				
 			}
 		}
 		

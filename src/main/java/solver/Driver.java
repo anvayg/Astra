@@ -152,7 +152,9 @@ public class Driver {
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(targetFinite, alphabetSet, ba);
 		
 		// Make template finite
-		template = SFAOperations.MkFiniteSFA(template, minterms, mintermToId, ba);
+		if (template != null) {
+			template = SFAOperations.MkFiniteSFA(template, minterms, mintermToId, ba);
+		}
 		
 		// Variables to be set later
 		SFT<CharPred, CharFunc, Character> mySFT = null;
