@@ -22,6 +22,7 @@ import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
+import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 import utilities.Pair;
 import utilities.SFAprovider;
@@ -138,7 +139,7 @@ public class RunBenchmarks {
 	
 	/* Repairing from the input */
 	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, 
-			Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
 			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
 			String benchmarkName, String outputFilename) throws TimeoutException, IOException {

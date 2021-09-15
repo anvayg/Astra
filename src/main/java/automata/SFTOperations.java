@@ -235,10 +235,14 @@ public class SFTOperations {
 	
 	/* Remove a set of transitions from an SFT */
 	public static SFT<CharPred, CharFunc, Character> removeTransitions(SFT<CharPred, CharFunc, Character> aut, 
-			Collection<SFTMove<CharPred, CharFunc, Character>> transitions) throws TimeoutException {
-		Collection<SFTMove<CharPred, CharFunc, Character>> currentTransitions = aut.getTransitions();
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions) throws TimeoutException {
+		Collection<SFTMove<CharPred, CharFunc, Character>> currentTransitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
+
+		for (Integer state : aut.getStates()) {
+			currentTransitions.addAll(aut.getInputMovesFrom(state));
+		}
 		
-		currentTransitions.removeAll(transitions);
+		currentTransitions.removeAll(badTransitions);
 		
 		return SFT.MkSFT(currentTransitions, aut.getInitialState(), aut.getFinalStatesAndTails(), ba);
 	}
@@ -272,9 +276,9 @@ public class SFTOperations {
 	}
 	
 	
-	public static Collection<SFTMove<CharPred, CharFunc, Character>> computeDiffTransitions(SFT<CharPred, CharFunc, Character> trans, 
+	public static Collection<SFTInputMove<CharPred, CharFunc, Character>> computeDiffTransitions(SFT<CharPred, CharFunc, Character> trans, 
 			SFT<CharPred, CharFunc, Character> modTrans) throws TimeoutException {
-		Collection<SFTMove<CharPred, CharFunc, Character>> diffTransitions = new ArrayList<SFTMove<CharPred, CharFunc, Character>>();
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> diffTransitions = new ArrayList<SFTInputMove<CharPred, CharFunc, Character>>();
 		
 		LinkedList<SFTInputMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTInputMove<CharPred, CharFunc, Character>>();
 

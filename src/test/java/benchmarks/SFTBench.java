@@ -295,7 +295,7 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
 		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
@@ -321,7 +321,7 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(1);
 		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(trans); 
@@ -345,7 +345,7 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(2);
 		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
@@ -368,7 +368,7 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
 		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		System.out.println(target.toDotString(ba));
 		
@@ -410,7 +410,7 @@ public class SFTBench {
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
 		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		
