@@ -108,7 +108,8 @@ public class Driver {
 	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
-			SFA<CharPred, Character> template, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, String filename, String benchmarkName) throws TimeoutException, IOException {
+			SFA<CharPred, Character> template, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, 
+			ArrayList<Boolean> config, String filename, String benchmarkName) throws TimeoutException, IOException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
         cfg.put("model", "true");
         Context ctx = new Context(cfg);
@@ -150,6 +151,9 @@ public class Driver {
 		// Make target FA total
 		SFA<CharPred, Character> targetTotal = SFAOperations.mkTotalFinite(targetFinite, alphabetSet, ba);
 		
+		// Make template finite
+		template = SFAOperations.MkFiniteSFA(template, minterms, mintermToId, ba);
+		
 		// Variables to be set later
 		SFT<CharPred, CharFunc, Character> mySFT = null;
 		SFT<CharPred, CharFunc, Character> mySFT2 = null;
@@ -158,7 +162,7 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, idToMinterm, config, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, idToMinterm, config, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 		mySFT = res.first;
 		solvingTime1 = res.second;
@@ -169,7 +173,7 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, mySFT, idToMinterm, config, ba);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, null, mySFT, idToMinterm, config, ba);
 			res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
