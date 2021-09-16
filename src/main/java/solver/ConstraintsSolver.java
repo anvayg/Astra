@@ -30,6 +30,7 @@ import com.microsoft.z3.Symbol;
 import com.microsoft.z3.TupleSort;
 
 import automata.SFAOperations;
+import automata.fst.FST;
 import automata.fst.FSTMove;
 import automata.fst.FSTTemplate;
 import automata.sfa.SFA;
@@ -929,7 +930,7 @@ public class ConstraintsSolver {
 		if (template != null) {
 			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
 				Integer stateFrom = transition.from;
-				Character move = transition.getWitness(ba);		// TODO: template and sftTemplate need to be minterm reduced
+				Character move = transition.getWitness(ba);
 				Integer stateTo = transition.to;
 				
 				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
@@ -956,8 +957,36 @@ public class ConstraintsSolver {
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
 				
-				/* TODO d1 */
+				/* d1 */
+				List<Character> outputs = transition.outputs;
+				if (outputs.size() > this.outputBound) {
+					throw new IllegalArgumentException("Template includes outputs larger than permitted output bound.");
+				}
 				
+				int counter = 0;
+				for (Character out : outputs) {
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(counter, BV);
+					BitVecExpr outInt = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+					
+					solver.add(ctx.mkEq(d1.apply(q, a, index), outInt));
+					
+					counter++;
+				}
+			}
+			
+			/* Only enforce d2 relation for the set of bad transitions */
+			Collection<FSTMove<Character, Character>> badTransitions = ftTemplate.getBadTransitions();
+			for (FSTMove<Character, Character> transition : badTransitions) {
+				Integer stateFrom = transition.from;
+				Character input = transition.input;
+				Integer stateTo = transition.to;
+				
+				/* d2 */
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				
+				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
 			}
 		}
 		
@@ -1101,6 +1130,37 @@ public class ConstraintsSolver {
 					Integer stateFrom = transition.from;
 					Character move = transition.getWitness(ba);
 					Integer stateTo = transition.to;
+					
+					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					
+					/* output_len */
+					Expr<BitVecSort> outputLenExpr = out_len.apply(q1, a);
+					BitVecNum outputLenNum = (BitVecNum) m.evaluate(outputLenExpr, false);
+					int outputLen = outputLenNum.getInt();
+								
+					/* get output */
+					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
+					for (int i = 0; i < outputLen; i++) {
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+						Expr<BitVecSort> d1exp = d1.apply(q1, a, index);
+						BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
+						int outMove = outMoveNum.getInt();
+						Character output = revAlphabetMap.get(outMove);
+						outputFunc.add(new CharConstant(output));
+					}
+								
+					SFTInputMove<CharPred, CharFunc, Character> newTrans = new SFTInputMove<CharPred, CharFunc, Character>(stateFrom, stateTo, new CharPred(move), outputFunc);
+					transitionsFT.add(newTrans);
+				}
+				
+			} else if (ftTemplate != null) {
+				/* Only add transitions of ftTemplate */
+				FST<Character, Character> aut = ftTemplate.getAut();
+				for (FSTMove<Character, Character> transition : aut.getTransitionsFrom(aut.getStates())) {
+					Integer stateFrom = transition.from;
+					Integer stateTo = transition.to;
+					Character move = transition.input;
 					
 					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
 					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);

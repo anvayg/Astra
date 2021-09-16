@@ -16,6 +16,7 @@ import org.sat4j.specs.TimeoutException;
 
 import automata.SFAOperations;
 import automata.SFTOperations;
+import automata.SFTTemplate;
 import automata.sfa.SFA;
 import solver.Driver;
 import theory.characters.CharFunc;
@@ -134,7 +135,7 @@ public class RunBenchmarks {
 		
 		// Call solver
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, null, outputFilename, benchmarkName);
 	}
 	
 	
@@ -142,7 +143,7 @@ public class RunBenchmarks {
 	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, 
 			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
 			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
-			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
+			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFTTemplate sftTemplate, 
 			String benchmarkName, String outputFilename) throws TimeoutException, IOException {
 
 		if (outputFilename == null) {
@@ -157,13 +158,17 @@ public class RunBenchmarks {
 		if (source == null) {	// Note: not doing preimage computation as of now
 			SFA<CharPred, Character> inputLang = aut.getDomain(ba);
 			
-			// remove badTransitions from aut
-			aut = SFTOperations.removeTransitions(aut, badTransitions);
-			
-			// compute source = original input - correct input
-			SFA<CharPred, Character> correctInputSet = aut.getDomain(ba);
-			source = inputLang.minus(correctInputSet, ba);
-			System.out.println(source.toDotString(ba));
+			if (sftTemplate != null) {
+				source = inputLang;
+				
+			} else {
+				// remove badTransitions from aut
+				aut = SFTOperations.removeTransitions(aut, badTransitions);
+
+				// compute source = original input - correct input
+				SFA<CharPred, Character> correctInputSet = aut.getDomain(ba);
+				source = inputLang.minus(correctInputSet, ba);
+			}
 		}
 			// else assume that aut is already restricted
 		
@@ -175,11 +180,15 @@ public class RunBenchmarks {
 		
 		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, sftTemplate, minterms, null, outputFilename, benchmarkName);
+		
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second is the pair is the restricted SFT
+		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second in the pair is the restricted SFT
 		String witness = result.third;
 
+		if (sftTemplate != null)
+			return; 	// No need to take a union in this case, as we are only repairing particular transitions
+		
 		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.unionWith(mySFT, ba);
 		System.out.println(mySFTrepair.toDotString(ba));
 
@@ -211,7 +220,7 @@ public class RunBenchmarks {
 		br.write("Running benchmark\n");
 		br.close();
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, null, outputFilename, benchmarkName);
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
 		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second is the pair is the restricted SFT
 		String witness = result.third;

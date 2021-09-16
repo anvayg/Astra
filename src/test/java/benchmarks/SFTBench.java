@@ -22,6 +22,9 @@ import org.sat4j.specs.TimeoutException;
 import SFT.GetTag;
 import automata.SFAOperations;
 import automata.SFTOperations;
+import automata.SFTTemplate;
+import automata.fst.FSTMove;
+import automata.fst.FSTTemplate;
 import automata.sfa.SFA;
 import solver.ConstraintsTestSymbolic;
 import solver.Driver;
@@ -307,9 +310,12 @@ public class SFTBench {
         examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
         
         
-        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", null);
+        // RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", null);
         
-        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", "testOutputFile");
+        // Make template
+        SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
+        
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, sftTemplate, "modSwapCase1", "testOutputFile");
 	}
 	
 	
@@ -449,7 +455,7 @@ public class SFTBench {
         config.add(false);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(CONFERENCE_NAME, CONFERENCE_ACRONYM, 2, 1, fraction, examples, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrAcronym");
+				Driver.runAlgorithm(CONFERENCE_NAME, CONFERENCE_ACRONYM, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrAcronym");
 	}
 	
 	/* Buggy extrAcronym2 obtained by only using example constraints */
@@ -532,7 +538,7 @@ public class SFTBench {
         config.add(true);
 	    
 	    Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(UPPERCASENAME, NAME, 2, 1, fraction, examples, null, null, config, "src/test/java/benchmarks/tmpOutput", "capProb");
+				Driver.runAlgorithm(UPPERCASENAME, NAME, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "capProb");
 	}
 	
 	
@@ -556,7 +562,7 @@ public class SFTBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(THINGANDAMOUNT, AMOUNT_EXTRACTED, 2, 1, fraction, examples, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrQuant");
+				Driver.runAlgorithm(THINGANDAMOUNT, AMOUNT_EXTRACTED, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrQuant");
 	}
 	
 	/* Buggy extrQuant obtained when no example provided */
@@ -614,7 +620,7 @@ public class SFTBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(FIRSTLASTNAME, NAME, 2, 1, fraction, examples, null, null, config, "src/test/java/benchmarks/tmpOutput", "removeLast");
+				Driver.runAlgorithm(FIRSTLASTNAME, NAME, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "removeLast");
 	}
 	
 	
@@ -683,7 +689,7 @@ public class SFTBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(UNCLEANED_DATA, CLEANEDODDS, 3, 2, fraction, examples, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrOdds");
+				Driver.runAlgorithm(UNCLEANED_DATA, CLEANEDODDS, 3, 2, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrOdds");
 	}
 	
 	

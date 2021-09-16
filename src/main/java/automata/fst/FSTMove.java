@@ -24,4 +24,26 @@ public class FSTMove<P, S> extends FMove {
 		
 		return String.format("%s -> %s [label=\"%s\"]\n", from, to, label.toString());
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof FSTMove<?, ?>))
+			return false;
+		
+		FSTMove<P, S> t = (FSTMove<P, S>) obj;
+		
+		if (t.from != this.from)
+			return false;
+		
+		if (t.to != this.to)
+			return false;
+		
+		if (t.input != this.input)
+			return false;
+		
+		if (!(t.outputs.equals(this.outputs)))
+			return false;
+		
+		return true;
+	}
 }

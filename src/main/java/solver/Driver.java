@@ -20,6 +20,9 @@ import com.microsoft.z3.Context;
 
 import automata.SFAOperations;
 import automata.SFTOperations;
+import automata.SFTTemplate;
+import automata.fst.FSTMove;
+import automata.fst.FSTTemplate;
 import automata.sfa.SFA;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
@@ -108,8 +111,9 @@ public class Driver {
 	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
 			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
-			SFA<CharPred, Character> template, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, 
-			ArrayList<Boolean> config, String filename, String benchmarkName) throws TimeoutException, IOException {
+			SFA<CharPred, Character> template, SFTTemplate sftTemplate, 
+			Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, String filename, 
+			String benchmarkName) throws TimeoutException, IOException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
         cfg.put("model", "true");
         Context ctx = new Context(cfg);
@@ -137,7 +141,6 @@ public class Driver {
         	sourceFinite = SFAOperations.MkFiniteSFA(source, minterms, mintermToId, ba);
         	targetFinite = SFAOperations.MkFiniteSFA(target, minterms, mintermToId, ba);
         }
-		
 		List<Pair<String, String>> examplesFinite = finitizeExamples(examples, idToMinterm);
 		
 		Set<Character> sourceAlphabetSet = SFAOperations.alphabetSet(sourceFinite, ba);
@@ -156,6 +159,12 @@ public class Driver {
 			template = SFAOperations.MkFiniteSFA(template, minterms, mintermToId, ba);
 		}
 		
+		// Set ftTemplate if transitions provided
+		FSTTemplate ftTemplate = null;
+		if (sftTemplate != null) {
+			ftTemplate = new FSTTemplate(sftTemplate, minterms, idToMinterm, mintermToId);
+		}
+		
 		// Variables to be set later
 		SFT<CharPred, CharFunc, Character> mySFT = null;
 		SFT<CharPred, CharFunc, Character> mySFT2 = null;
@@ -164,7 +173,7 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, null, null, idToMinterm, config, ba);
+		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, null, idToMinterm, config, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
 		mySFT = res.first;
 		solvingTime1 = res.second;
@@ -175,7 +184,7 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, null, null, mySFT, idToMinterm, config, ba);
+			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, mySFT, idToMinterm, config, ba);
 			res = c.mkConstraints(null, false);
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
