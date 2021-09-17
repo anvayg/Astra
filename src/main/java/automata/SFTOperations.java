@@ -398,7 +398,7 @@ public class SFTOperations {
 	
 	/* Method for locating which transitions need to be repaired */
 	public static Collection<SFTInputMove<CharPred, CharFunc, Character>> localizeFaults(SFT<CharPred, CharFunc, Character> aut, List<Pair<String, String>> examples) throws TimeoutException {
-		Collection <SFTInputMove<CharPred, CharFunc, Character>> badTransitions = new ArrayList<SFTInputMove<CharPred, CharFunc, Character>>();
+		Set<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = new HashSet<SFTInputMove<CharPred, CharFunc, Character>>();
 		
 		for (Pair<String, String> example : examples) {
         	String exampleOutput = SFTOperations.getOutputString(aut, example.first);	// applies to deterministic transducers
