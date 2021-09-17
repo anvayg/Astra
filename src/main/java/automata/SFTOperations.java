@@ -65,6 +65,30 @@ public class SFTOperations {
 	}
 	
 	/* 
+	 * Returns the list of transitions taken by an input string on a transducer, in order
+	 */
+	public static List<SFTInputMove<CharPred, CharFunc, Character>> getTransitionsTaken(SFT<CharPred, CharFunc, Character> trans, String inputStr) throws TimeoutException {
+		List<SFTInputMove<CharPred, CharFunc, Character>> transitionsTaken = new ArrayList<SFTInputMove<CharPred, CharFunc, Character>>();
+		Integer state = trans.getInitialState();
+		
+		for (int i = 0; i < inputStr.length(); i++) {
+			Character next = inputStr.charAt(i);
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions = trans.getInputMovesFrom(state);
+			
+			for (SFTInputMove<CharPred, CharFunc, Character> transition : transitions) {
+				if (transition.guard.isSatisfiedBy(next)) { 	// only 1 transition should be sat
+					transitionsTaken.add(transition);
+					
+					state = transition.to;
+				}
+			}
+		}
+		
+		
+		return transitionsTaken;
+	}
+	
+	/* 
 	 * Based on SFT.OutputOn but returns all outputs of a non-det transducer
 	 * */
 	public static List<String> getAllOutputs(SFT<CharPred, CharFunc, Character> trans, String inputStr, 
@@ -370,6 +394,25 @@ public class SFTOperations {
 		}
 		
 		return newTransitions;
+	}
+	
+	/* Method for locating which transitions need to be repaired */
+	public static Collection<SFTInputMove<CharPred, CharFunc, Character>> localizeFaults(SFT<CharPred, CharFunc, Character> aut, List<Pair<String, String>> examples) throws TimeoutException {
+		Collection <SFTInputMove<CharPred, CharFunc, Character>> badTransitions = new ArrayList<SFTInputMove<CharPred, CharFunc, Character>>();
+		
+		for (Pair<String, String> example : examples) {
+        	String exampleOutput = SFTOperations.getOutputString(aut, example.first);	// applies to deterministic transducers
+        	List<SFTInputMove<CharPred, CharFunc, Character>> transitionsTaken = SFTOperations.getTransitionsTaken(aut, example.first);
+        	
+        	// Take the difference between the transitions of the buggy inputs and those of the correct inputs
+        	if (!exampleOutput.equals(example.second)) {
+        		badTransitions.addAll(transitionsTaken);
+        	} else {
+        		badTransitions.removeAll(transitionsTaken);
+        	}
+		}
+		
+		return badTransitions;
 	}
 	
 	/* String from List of Chars */
