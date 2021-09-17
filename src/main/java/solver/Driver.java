@@ -174,7 +174,21 @@ public class Driver {
 		
 		long startTime = System.nanoTime();
 		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, null, idToMinterm, config, ba);
-		Pair<SFT<CharPred, CharFunc, Character>, Long> res = c.mkConstraints(null, false);
+		Pair<SFT<CharPred, CharFunc, Character>, Long> res = null;
+		try {
+			res = c.mkConstraints(null, false);
+		} catch (Exception e) {
+			if (filename != null) {
+				BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
+				
+				if (benchmarkName != null) {
+					br.write(benchmarkName + " failed because of exception:\n");
+					br.close();
+				}
+			return null;
+			}
+		}
+		
 		mySFT = res.first;
 		solvingTime1 = res.second;
 	
@@ -204,10 +218,6 @@ public class Driver {
 		}
 		
 		if (mySFT2restricted != null) {
-			System.out.println(mySFTexpanded.toDotString(ba));
-			System.out.println(mySFTrestricted.toDotString(ba));
-			System.out.println(mySFT2expanded.toDotString(ba));
-			System.out.println(mySFT2restricted.toDotString(ba));
 			// Check equality of expanded transducers
 			if (!SFT.decide1equality(mySFTrestricted, mySFT2restricted, ba)) {
 				System.out.println("Not equiv");
@@ -218,9 +228,9 @@ public class Driver {
 						sb.append(ch);
 					}
 					witness = sb.toString();
-				} catch(Exception e) {
+				} catch(Exception ex) {
 					// TODO
-					System.out.println(e);
+					System.out.println(ex);
 				}
 			}
 		}

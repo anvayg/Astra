@@ -1058,8 +1058,6 @@ public class ConstraintsSolver {
 		if (solver.check() == Status.SATISFIABLE) {
 			Model m = solver.getModel();
 			stopTime = System.nanoTime();
-			System.out.println((stopTime - startTime));
-			System.out.println((stopTime - startTime) / 1000000000);
 			
 			/* Debug */
 			if (debug) {

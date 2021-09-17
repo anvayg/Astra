@@ -182,6 +182,8 @@ public class RunBenchmarks {
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
 				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, sftTemplate, minterms, null, outputFilename, benchmarkName);
 		
+		if (result == null) return;
+		
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
 		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second in the pair is the restricted SFT
 		String witness = result.third;
