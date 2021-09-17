@@ -928,6 +928,10 @@ public class ConstraintsSolver {
 		
 		/* Use the d2 relation (the successor states) of the template, if one is provided, and enforce it */
 		if (template != null) {
+			if (this.numStates != template.stateCount()) {
+				throw new IllegalArgumentException("If template is provided, then numStates must be the same as the number of states in the template");
+			}
+			
 			for (SFAMove<CharPred, Character> transition : template.getTransitions()) { 	
 				Integer stateFrom = transition.from;
 				Character move = transition.getWitness(ba);
@@ -943,6 +947,10 @@ public class ConstraintsSolver {
 		
 		/* Enforce the d1 and d2 relations of the good transitions of the template */
 		if (ftTemplate != null) {
+			if (this.numStates != ftTemplate.getAut().stateCount()) {
+				throw new IllegalArgumentException("If ftTemplate is provided, then numStates must be the same as the number of states in the template");
+			}
+			
 			Collection<FSTMove<Character, Character>> goodTransitions = ftTemplate.getGoodTransitions();
 			
 			for (FSTMove<Character, Character> transition : goodTransitions) {

@@ -182,7 +182,7 @@ public class Driver {
 				BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
 				
 				if (benchmarkName != null) {
-					br.write(benchmarkName + " failed because of exception:\n");
+					br.write(benchmarkName + " failed because of exception: " + e.toString());
 					br.close();
 				}
 			return null;
