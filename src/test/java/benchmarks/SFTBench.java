@@ -292,13 +292,11 @@ public class SFTBench {
 	@Test
 	public void modMkSwapCase1Repair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkSwapCase();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
+		// Incorrect output for [A-Z] transition
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
-		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
@@ -307,28 +305,32 @@ public class SFTBench {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("A23B", "a23b"));
-        examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
+        examples.add(new Pair<String, String>("[h\\", "[H\\"));
         
+        // localization
+        Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
         
-        // RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", null);
+        // Without template
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase1", null);
         
         // Make template
         SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
         
-        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, sftTemplate, "modSwapCase1", "testOutputFile");
+        // With template
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, sftTemplate, "modSwapCase1", "modSwapCase1_template");
 	}
 	
-	
+	@Test
 	public void modMkSwapCase2() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkSwapCase();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
+		// Missing a transition
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(1);
-		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
+		
+		Collection<Pair<CharPred, ArrayList<Integer>>> defaultMinterms = SFTOperations.getMinterms(modSFT); 
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(trans); 
 			// need to use the orginal transducer's minterms here
@@ -337,21 +339,25 @@ public class SFTBench {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("a23b", "A23B"));
-        examples.add(new Pair<String, String>("&Yl", "&yL"));
+        examples.add(new Pair<String, String>("[h\\", "[H\\"));
         
-        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase2", null);
+        // localization
+        Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+        
+        // Default minterms (fails)
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, defaultMinterms, 1, 1, fraction, examples, null, "modSwapCase2", "modSwapCase2_out");
+        
+        // Custom minterms (fails)
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase2", "modSwapCase2_out");
 	}
 	
-	
+	@Test
 	public void modMkSwapCase3() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkSwapCase();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(2);
-		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
@@ -360,65 +366,120 @@ public class SFTBench {
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("A23B", "a23b"));
-        examples.add(new Pair<String, String>("[h\\Q", "[H\\q"));
+        examples.add(new Pair<String, String>("[h\\", "[H\\"));
         
+        // localization
+        Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+        
+        // Without template
         RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modSwapCase3", null);
+        
+        // Make template
+        SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
+        
+        // With template
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, sftTemplate, "modSwapCase3", "modSwapCase3_template");
 	}
 	
-	
+	@Test
 	public void modEscapeBrackets1() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
-		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
-		System.out.println(target.toDotString(ba));
 		
-		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
-		// TODO Adding required predicates/minterms
+		Collection<Pair<CharPred, ArrayList<Integer>>> defaultMinterms = SFTOperations.getMinterms(modSFT);
 		
-		int[] fraction = new int[] {3, 1};
+		// Adding required predicates/minterms
+		Set<CharPred> preds = new HashSet<CharPred>();
+		preds.addAll(SFTOperations.getPreds(modSFT));
+		preds.addAll(SFAOperations.getPreds(target));
+		preds.add(new CharPred('g'));
+		
+		ArrayList<CharPred> predsList = new ArrayList<CharPred>();
+		predsList.addAll(preds);
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predsList);
+		
+		int[] fraction = new int[] {4, 1};
         
         List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("<", "&lt;"));
+        examples.add(new Pair<String, String>(">", "&gt;"));
+        examples.add(new Pair<String, String>(";gf", ""));
+        examples.add(new Pair<String, String>("&t&l", ""));
         
+        // localization
+        Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+        
+        // Default minterms, no template
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, defaultMinterms, 1, 4, fraction, examples, null, "modEscapeBrackets1", "modEscapeBrackets1_default");
+        
+        // Custom minterms
         RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 4, fraction, examples, null, "modEscapeBrackets1", null);
+        
+        // Make template
+        SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
+        
+        // With template
+        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 4, fraction, examples, sftTemplate, "modEscapeBrackets1", "modEscapeBrackets1_template");
 	}
 	
-	
-	public void modEscapeBrackets3() throws TimeoutException {
+	@Test
+	public void modEscapeBrackets3() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(2);
-		System.out.println(modSFT.toDotString(ba));
 		
-		SFA<CharPred, Character> source = modSFT.getDomain(ba);
 		SFA<CharPred, Character> target = modSFT.getOverapproxOutputSFA(ba);
 		
+		Collection<Pair<CharPred, ArrayList<Integer>>> defaultMinterms = SFTOperations.getMinterms(modSFT);
 		
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
-		
+		// Adding required predicates/minterms
+		Set<CharPred> preds = new HashSet<CharPred>();
+		preds.addAll(SFTOperations.getPreds(modSFT));
+		preds.addAll(SFAOperations.getPreds(target));
+		preds.add(new CharPred('g'));
+
+		ArrayList<CharPred> predsList = new ArrayList<CharPred>();
+		predsList.addAll(preds);
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predsList);
+
+		int[] fraction = new int[] {4, 1};
+
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("<", "&lt;"));
+		examples.add(new Pair<String, String>(">", "&gt;"));
+		examples.add(new Pair<String, String>(";gf", ""));
+		examples.add(new Pair<String, String>("&t&l", ""));
+		examples.add(new Pair<String, String>("k", ""));
+
+		// localization
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+
+		// Default minterms, no template
+		RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, defaultMinterms, 1, 4, fraction, examples, null, "modEscapeBrackets3", "modEscapeBrackets3_default");
+
+		// Custom minterms
+		RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 4, fraction, examples, null, "modEscapeBrackets3", null);
+
+		// Make template
+		SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
+
+		// With template
+		RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 4, fraction, examples, sftTemplate, "modEscapeBrackets3", "modEscapeBrackets3_template");
 	}
 	
-	
+	@Test
 	public void modCaesarCipher1() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkCaesarCipher();
-		System.out.println(trans.toDotString(ba));
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
 		
 		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(0);
-		System.out.println(modSFT.toDotString(ba));
 		
-		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.computeDiffTransitions(trans, modSFT);
 		SFA<CharPred, Character> target = trans.getOverapproxOutputSFA(ba);
-		
 		
 		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
 		
@@ -427,12 +488,22 @@ public class SFTBench {
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
         examples.add(new Pair<String, String>("3", "6"));
         
-        RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, null, 1, 1, fraction, examples, null, "modCaesarCipher1", null);
+        // localization
+     	Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+
+     	// Default (fails)
+     	RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 1, fraction, examples, null, "modCaesarCipher", null);
 	}
 	
 	
-	// Trying to introduce bugs in FlashFill synthesis benchmarks (synthesize using only example constraints)
 	
+	
+	/* 
+	 * Flash-Fill Benchmarks
+	 * */
+	
+	
+	// Trying to introduce bugs in FlashFill synthesis benchmarks (synthesizing using only example constraints)
 	public void extrAcronym2() throws TimeoutException, IOException {
 		String CONFERENCE_NAME_REGEX = "[A-Za-z]+( [A-Za-z]+)*";
 		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba); 
@@ -486,33 +557,43 @@ public class SFTBench {
 		Map<Integer, Set<List<Character>>> finStatesAndTails = new HashMap<Integer, Set<List<Character>>>();
 		finStatesAndTails.put(0, new HashSet<List<Character>>());
 		finStatesAndTails.put(1, new HashSet<List<Character>>());
-
+		
 		return SFT.MkSFT(transitions, 0, finStatesAndTails, ba);
 	}
 	
-	// TODO: fix
-	public void repairExtrAcronym() throws TimeoutException {
-		SFT<CharPred, CharFunc, Character> aut = mkBuggyExtrAcronym();
-		System.out.println(aut.toDotString(ba));
-		
-		SFA<CharPred, Character> outputLang = aut.getOverapproxOutputSFA(ba);
-		SFA<CharPred, Character> inputLang = aut.getDomain(ba);
+	// Benchmark: Repairs buggy ExtrAcronym2
+	@Test
+	public void repairExtrAcronym() throws TimeoutException, IOException {
+		SFT<CharPred, CharFunc, Character> modSFT = mkBuggyExtrAcronym();
+		String CONFERENCE_NAME_REGEX = "[A-Za-z]+( [A-Za-z]+)*";
+		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		modSFT = modSFT.domainRestriction(CONFERENCE_NAME, ba);
+		System.out.println(modSFT.toDotString(ba));
 		
 		String CONFERENCE_ACRONYM_REGEX = "[A-Z][A-Z]*";
 		SFA<CharPred, Character> target = (new SFAprovider(CONFERENCE_ACRONYM_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		System.out.println(target.toDotString(ba));
 		
-		SFA<CharPred, Character> diff = outputLang.minus(target, ba);
-		System.out.println(diff.toDotString(ba));
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(modSFT);
 		
-		// Obtain set of bad inputs by taking preimage
-		SFA<CharPred, Character> preimage = aut.inverseImage(diff, ba);
-		System.out.println(preimage.toDotString(ba));
+		int[] fraction = new int[] {1, 1};
 		
-		// Set of good inputs
-		SFA<CharPred, Character> correctInputSet = inputLang.minus(preimage, ba);
-		SFT<CharPred, CharFunc, Character> correctSFT = aut.domainRestriction(correctInputSet, ba);
-		System.out.println(correctSFT.toDotString(ba));
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+        examples.add(new Pair<String, String>("Principles of Programming Languages", "POPL"));
+        examples.add(new Pair<String, String>("Programming Language Design Implementation", "PLDI"));
+        examples.add(new Pair<String, String>("vLU", "V"));
+        
+        // localization
+     	Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+     	System.out.println(badTransitions);
+
+     	// Default (fails)
+     	RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 2, 1, fraction, examples, null, "modExtrAcronym2", null);
+     	
+     	// Make template
+     	SFTTemplate sftTemplate = new SFTTemplate(modSFT, badTransitions);
+
+     	// With template (TODO: install timeout)
+     	// RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, modSFT.stateCount(), 1, fraction, examples, sftTemplate, "modExtrAcronym2", "modExtrAcronym2_template");
 	}
 	
 	
@@ -530,7 +611,7 @@ public class SFTBench {
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
 	    // examples.add(new Pair<String, String>("DOE", "Doe"));
 	    // examples.add(new Pair<String, String>("ODE", "Ode"));
-	    	// removing example
+	    	// removing example(s)
 	    
 	    ArrayList<Boolean> config = new ArrayList<Boolean>();
         config.add(true);
