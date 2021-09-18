@@ -13,6 +13,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.sat4j.specs.TimeoutException;
 
@@ -21,7 +26,6 @@ import com.microsoft.z3.Context;
 import automata.SFAOperations;
 import automata.SFTOperations;
 import automata.SFTTemplate;
-import automata.fst.FSTMove;
 import automata.fst.FSTTemplate;
 import automata.sfa.SFA;
 import theory.characters.CharFunc;
@@ -173,10 +177,18 @@ public class Driver {
 		long solvingTime2 = 0;
 		
 		long startTime = System.nanoTime();
-		ConstraintsSolver c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, null, idToMinterm, config, ba);
+		ConstraintsSolver c1 = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, null, idToMinterm, config, ba);
 		Pair<SFT<CharPred, CharFunc, Character>, Long> res = null;
+		
+		// Use ExecutorService to call mkConstraints in a new thread
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		Callable<Pair<SFT<CharPred, CharFunc, Character>, Long>> call = () -> {
+			return c1.mkConstraints(null, false);
+		};
+		Future<Pair<SFT<CharPred, CharFunc, Character>, Long>> future = executor.submit(call);
+		
 		try {
-			res = c.mkConstraints(null, false);
+			res = future.get(300L, TimeUnit.SECONDS);
 		} catch (Exception e) {
 			if (filename != null) {
 				BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
@@ -187,6 +199,8 @@ public class Driver {
 				}
 			return null;
 			}
+		} finally {
+		    executor.shutdownNow();
 		}
 		
 		mySFT = res.first;
@@ -198,8 +212,31 @@ public class Driver {
 		if (mySFT.getTransitions().size() != 0) { // if SAT
 			// Get second solution, if there is one
 			startTime = System.nanoTime();
-			c = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, mySFT, idToMinterm, config, ba);
-			res = c.mkConstraints(null, false);
+			ConstraintsSolver c2 = new ConstraintsSolver(ctx, sourceFinite, targetTotal, alphabetMap, numStates, outputBound, examplesFinite, "mean", fraction, template, ftTemplate, mySFT, idToMinterm, config, ba);
+			
+			// Again call mkConstraints in a separate thread
+			executor = Executors.newSingleThreadExecutor();
+			call = () -> {
+				return c2.mkConstraints(null, false);
+			};
+			future = executor.submit(call);
+			
+			try {
+				res = future.get(300L, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				if (filename != null) {
+					BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
+					
+					if (benchmarkName != null) {
+						br.write(benchmarkName + " failed because of exception: " + e.toString());
+						br.close();
+					}
+				return null;
+				}
+			} finally {
+			    executor.shutdownNow();
+			}
+			
 			stopTime = System.nanoTime();
 			mySFT2 = res.first;
 			solvingTime2 = res.second;
@@ -251,6 +288,10 @@ public class Driver {
 			br.write("Transitions in targetFinite: " + targetFinite.getTransitionCount() + "\n");
 			br.write("Size of alphabet: " + alphabetMap.size() + "\n");
 			br.write("Number of examples: " + examples.size() + "\n");
+			if (ftTemplate != null) {
+				br.write("Number of bad transitions localized: " + ftTemplate.getBadTransitions().size() + "\n");
+			}
+			
 			br.write("SFT1 solving time: " + solvingTime1 + "\n");
 			if (mySFT2restricted != null) {
 				br.write("SFT2 solving time: " + solvingTime2 + "\n");
