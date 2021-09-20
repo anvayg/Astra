@@ -176,7 +176,13 @@ public class RunBenchmarks {
 		// Un-normalize source and target using minterms
 		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
 		source = unnormalized.first;
+		if (!source.isDeterministic(ba)) {
+			source = source.determinize(ba);
+		}
 		target = unnormalized.second;
+		if (!target.isDeterministic(ba)) {
+			target = target.determinize(ba);
+		}
 		
 		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
@@ -192,7 +198,6 @@ public class RunBenchmarks {
 			return; 	// No need to take a union in this case, as we are only repairing particular transitions
 		
 		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.unionWith(mySFT, ba);
-		System.out.println(mySFTrepair.toDotString(ba));
 
 		br = new BufferedWriter(new FileWriter(new File(outputFilename), true));
 		br.write("SFTrepair1:\n");
