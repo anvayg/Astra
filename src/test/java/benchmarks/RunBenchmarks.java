@@ -174,14 +174,16 @@ public class RunBenchmarks {
 		
 		
 		// Un-normalize source and target using minterms
-		Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
-		source = unnormalized.first;
-		if (!source.isDeterministic(ba)) {
-			source = source.determinize(ba);
-		}
-		target = unnormalized.second;
-		if (!target.isDeterministic(ba)) {
-			target = target.determinize(ba);
+		if (minterms != null) {
+			Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
+			source = unnormalized.first;
+			if (!source.isDeterministic(ba)) {
+				source = source.determinize(ba);
+			}
+			target = unnormalized.second;
+			if (!target.isDeterministic(ba)) {
+				target = target.determinize(ba);
+			}
 		}
 		
 		// Run algorithm
