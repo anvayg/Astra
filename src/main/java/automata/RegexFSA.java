@@ -268,17 +268,28 @@ public class RegexFSA {
 		if (transitions.length <= 1)
 			return;
 		
-		RegexNode unionRegex = transitions[0].input;
-		Integer finalState = transitions[0].to;
+		// Find first non-null transition
+		RegexNode unionRegex = null;
+		Integer finalState = null;
+		int index = 0;
+		for (int i = 0; i < transitions.length; i++) {
+			if (transitions[i].input != null) {
+				unionRegex = transitions[i].input;
+				finalState = transitions[i].to;
+				index = i;
+				break;
+			}
+		}
+		if (unionRegex == null) return;
 		
-		// This currently assumes that none of the remaining transitions will be null, might need to change
-		for (int i = 1; i < transitions.length; i++) { 		
-			unionRegex = new UnionNode(unionRegex, transitions[i].input);
+		// Take union
+		for (int i = index; i < transitions.length; i++) {
+			if (transitions[i].input != null)
+				unionRegex = new UnionNode(unionRegex, transitions[i].input);
 		}
 		
 		newTransitionSet.add(new FSAMove<RegexNode>(regexAut.getInitialState(), finalState, unionRegex));
 		regexAut = FSA.MkFSA(newTransitionSet, regexAut.getInitialState(), regexAut.getFinalStates());
-		System.out.println(this.toDotString());
 	}
 	
 	/* 
@@ -292,6 +303,8 @@ public class RegexFSA {
 		for (FSAMove<RegexNode> t : transition) {
 			if (counter == 1) throw new IllegalArgumentException("State elimination failed: more than 1 transition");
 			
+			if (t.input == null) return "";
+			
 			regex = t.input;
 		}
 		
@@ -304,6 +317,11 @@ public class RegexFSA {
 		return regexString;
 	}
 	
+	public String toRegex() {
+		this.stateElimination();
+		return this.formatRegex();
+	}
+	
 	public static void main(String[] args) throws TimeoutException {
 		// Test toSFARegex
 		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*";
@@ -311,8 +329,7 @@ public class RegexFSA {
 		System.out.println(CONFERENCE_NAME.toDotString(ba));
 		
 		RegexFSA regexFSA = new RegexFSA(CONFERENCE_NAME);
-		regexFSA.stateElimination();
-		System.out.println(regexFSA.formatRegex());
+		System.out.println(regexFSA.toRegex());
 		
 		
 		String CONFERENCE_ACRONYM_REGEX = "[A-Z][A-Z]*";
@@ -320,8 +337,7 @@ public class RegexFSA {
 		System.out.println(CONFERENCE_ACRONYM.toDotString(ba));
 		
 		regexFSA = new RegexFSA(CONFERENCE_ACRONYM);
-		regexFSA.stateElimination();
-		System.out.println(regexFSA.formatRegex());
+		System.out.println(regexFSA.toRegex());
 	}
 	
 }
