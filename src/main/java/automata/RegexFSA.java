@@ -16,6 +16,7 @@ import RegexParser.ConcatenationNode;
 import RegexParser.FormulaNode;
 import RegexParser.IntervalNode;
 import RegexParser.NormalCharNode;
+import RegexParser.MetaCharNode;
 import RegexParser.RegexListNode;
 import RegexParser.RegexNode;
 import RegexParser.StarNode;
@@ -53,12 +54,21 @@ public class RegexFSA {
 			List<IntervalNode> intervalNodeList = new ArrayList<IntervalNode>();
 			
 			for (ImmutablePair<Character, Character> interval : intervals) {
-				NormalCharNode left = new NormalCharNode(interval.getLeft());
-				NormalCharNode right = new NormalCharNode(interval.getRight());
 				IntervalNode intervalNode = null;
-				if (left == right) {
+				
+				// hacky (TODO: implement in a more general fashion)
+				if (interval.getLeft() == '\t' && interval.getRight() == '\r') {
+					MetaCharNode left = new MetaCharNode('t');
+					MetaCharNode right = new MetaCharNode('r');
+					intervalNode = new IntervalNode(left, right);
+					
+				} else if (interval.getLeft() == interval.getRight()) {
+					NormalCharNode left = new NormalCharNode(interval.getLeft());
 					intervalNode = new IntervalNode(left);
+					
 				} else {
+					NormalCharNode left = new NormalCharNode(interval.getLeft());
+					NormalCharNode right = new NormalCharNode(interval.getRight());
 					intervalNode = new IntervalNode(left, right);
 				}
 				
@@ -67,7 +77,7 @@ public class RegexFSA {
 			
 			// Make character class for this CharPred
 			CharacterClassNode charClass = new CharacterClassNode(intervalNodeList);
-			
+
 			// Make RegexNode
 			LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
 			concatList.add(charClass);
@@ -313,6 +323,7 @@ public class RegexFSA {
 		
 		String regexString = sb.toString();
 		regexString = regexString.replaceAll("Char:", "");
+		regexString = regexString.replaceAll("Meta:", "\\\\");
 		regexString = regexString.replaceAll(" ]", "]");
 		return regexString;
 	}
@@ -324,7 +335,7 @@ public class RegexFSA {
 	
 	public static void main(String[] args) throws TimeoutException {
 		// Test toSFARegex
-		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*";
+		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*(\\s[A-Z][a-z]*)*"; 	// modified from SynthBench for experimenting
 		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		System.out.println(CONFERENCE_NAME.toDotString(ba));
 		
@@ -337,6 +348,14 @@ public class RegexFSA {
 		System.out.println(CONFERENCE_ACRONYM.toDotString(ba));
 		
 		regexFSA = new RegexFSA(CONFERENCE_ACRONYM);
+		System.out.println(regexFSA.toRegex());
+		
+		
+		String AMOUNT_EXTRACTED_REGEX = "[0-9][a-zA-Z 0-9]*";
+		SFA<CharPred, Character> AMOUNT_EXTRACTED = (new SFAprovider(AMOUNT_EXTRACTED_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		System.out.println(AMOUNT_EXTRACTED.toDotString(ba));
+		
+		regexFSA = new RegexFSA(AMOUNT_EXTRACTED);
 		System.out.println(regexFSA.toRegex());
 	}
 	
