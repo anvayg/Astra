@@ -57,7 +57,7 @@ public class FSA<P> extends FAutomaton<P> {
 		return aut;
 	}
 	
-	private void addTransition(FSAMove<P> transition) {
+	public void addTransition(FSAMove<P> transition) {
 		if (transition.from > maxStateId)
 			maxStateId = transition.from;
 		if (transition.to > maxStateId)
@@ -193,6 +193,10 @@ public class FSA<P> extends FAutomaton<P> {
 	@Override
 	public Collection<Integer> getStates() {
 		return states;
+	}
+
+	public Integer getMaxStateId() {
+		return maxStateId;
 	}
 
 }
