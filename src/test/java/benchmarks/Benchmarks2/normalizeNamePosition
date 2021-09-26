@@ -2,9 +2,7 @@ NAME: ([A-Z][a-z]*) TITLE: ([A-Z][a-z]*)
 ([A-Z][a-z]*)[(]([A-Z][a-z]*)[)]
 NAME: Alex TITLE: Asst
 Alex(Asst)
-NAME: Ben TITLE: Mr
-Ben(Mr)
 
-3
+6
 2
 1/1

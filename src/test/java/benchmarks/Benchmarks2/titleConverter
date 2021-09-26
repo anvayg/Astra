@@ -1,0 +1,8 @@
+<Field Id=1>[a-zA-Z\s0-9]*</Field>
+"title"="[a-zA-Z\s0-9][a-zA-Z\s0-9]*"
+<Field Id=1>title</Field>
+"title"="title"
+
+3
+1
+1/1
