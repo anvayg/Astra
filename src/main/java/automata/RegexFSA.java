@@ -1,10 +1,13 @@
 package automata;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
@@ -187,8 +190,7 @@ public class RegexFSA {
 			regexAut = FSA.MkFSA(newTransitions, regexAut.getInitialState(), finStateList);
 		}
 		
-		// Note: Merging of transitions such that there is only a single transition b/w any 2 states
-		// isn't done. It is assumed that the input SFA was normalized.
+		System.out.println(this.toDotString());
 		
 		// Eliminate states other than initial and final
 		for (Integer state : regexAut.getStates()) {
@@ -216,9 +218,9 @@ public class RegexFSA {
 					if (newFrom == state || newTo == state)
 						continue;
 					
-					ConcatenationNode regexIn = (ConcatenationNode) transitionIn.input; 	// these must be ConcatNodes
-					ConcatenationNode regexOut = (ConcatenationNode) transitionOut.input;
-					ConcatenationNode newRegex = null;
+					RegexNode regexIn = transitionIn.input; 	// these must be ConcatNodes
+					RegexNode regexOut = transitionOut.input;
+					RegexNode newRegex = null;
 					
 					if (selfLoop != null && regexIn != null && regexOut != null) {
 						LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
@@ -269,37 +271,77 @@ public class RegexFSA {
 			
 			// New automaton
 			regexAut = FSA.MkFSA(newTransitionSet, regexAut.getInitialState(), regexAut.getFinalStates());
+			
+			// Union of transitions from and to the same states
+			normalizeRegexFSA();
+			
+			System.out.println(this.toDotString());
 		}
+	}
+	
+	public void normalizeRegexFSA() {
+		Collection<FSAMove<RegexNode>> newTransitions = new HashSet<FSAMove<RegexNode>>();
 		
-		// Union of transitions from initial to final state
-		Collection<FSAMove<RegexNode>> newTransitionSet = new HashSet<FSAMove<RegexNode>>();
-		Collection<FSAMove<RegexNode>> currentTransitions = regexAut.getTransitionsFrom(regexAut.getInitialState());
-		FSAMove<RegexNode>[] transitions = (FSAMove<RegexNode>[]) currentTransitions.toArray(new FSAMove<?> [currentTransitions.size()]);
-		if (transitions.length <= 1)
-			return;
-		
-		// Find first non-null transition
-		RegexNode unionRegex = null;
-		Integer finalState = null;
-		int index = 0;
-		for (int i = 0; i < transitions.length; i++) {
-			if (transitions[i].input != null) {
-				unionRegex = transitions[i].input;
-				finalState = transitions[i].to;
-				index = i;
-				break;
+		for (Integer state : regexAut.getStates()) {
+			if (regexAut.getFinalStates().contains(state)) continue; 	// We will not insert transitions out of the final state
+			
+			Set<Integer> alreadySeen = new HashSet<Integer>();
+			
+			Collection<FSAMove<RegexNode>> transitionsOut = regexAut.getTransitionsFrom(state);
+			for (FSAMove<RegexNode> t1 : transitionsOut) {
+				Integer stateTo = t1.to;
+				
+				// If we have already seen this state, then all transitions to it would have already been combined
+				if (alreadySeen.contains(stateTo)) continue;
+				
+				alreadySeen.add(stateTo);
+				
+				Collection<FSAMove<RegexNode>> commonTransitions = new HashSet<FSAMove<RegexNode>>();
+				
+				// Inner for-loop finds any other transitions to the same state
+				for (FSAMove<RegexNode> t2 : transitionsOut) {
+					if (t2.to == stateTo)
+						commonTransitions.add(t2);
+				}
+				
+				// Combine transitions if any more were found
+				if (commonTransitions.size() > 1) {
+					FSAMove<RegexNode>[] transitions = 
+							(FSAMove<RegexNode>[]) commonTransitions.toArray(new FSAMove<?> [commonTransitions.size()]);
+					
+					// Find first non-null transition
+					RegexNode unionRegex = null;
+					int index = 0;
+					for (int i = 0; i < transitions.length; i++) {
+						if (transitions[i].input != null) {
+							unionRegex = transitions[i].input;
+							index = i;
+							break;
+						}
+					}
+					
+					// If all transitions are null
+					if (unionRegex == null) {
+						newTransitions.add(new FSAMove<RegexNode>(state, stateTo, null));
+					}
+					
+					// Take union
+					for (int i = index + 1; i < transitions.length; i++) {
+						if (transitions[i].input != null)
+							unionRegex = new UnionNode(unionRegex, transitions[i].input);
+					}
+					newTransitions.add(new FSAMove<RegexNode>(state, stateTo, unionRegex));
+					
+					
+				} else {	// Keep original transitions if no other transitions go to the same state from this one
+					newTransitions.add(t1);
+				}
+				
 			}
 		}
-		if (unionRegex == null) return;
 		
-		// Take union
-		for (int i = index; i < transitions.length; i++) {
-			if (transitions[i].input != null)
-				unionRegex = new UnionNode(unionRegex, transitions[i].input);
-		}
-		
-		newTransitionSet.add(new FSAMove<RegexNode>(regexAut.getInitialState(), finalState, unionRegex));
-		regexAut = FSA.MkFSA(newTransitionSet, regexAut.getInitialState(), regexAut.getFinalStates());
+		// New automaton
+		regexAut = FSA.MkFSA(newTransitions, regexAut.getInitialState(), regexAut.getFinalStates());
 	}
 	
 	/* 
@@ -325,6 +367,10 @@ public class RegexFSA {
 		regexString = regexString.replaceAll("Char:", "");
 		regexString = regexString.replaceAll("Meta:", "\\\\");
 		regexString = regexString.replaceAll(" ]", "]");
+//		regexString = regexString.replaceAll("\\(", "");
+//		regexString = regexString.replaceAll("\\)", "");
+//		regexString = regexString.replaceAll("\\]\\[", "\\] . \\[");
+//		regexString = regexString.replaceAll("\\*\\[", "\\* . \\[");
 		return regexString;
 	}
 	
@@ -333,30 +379,30 @@ public class RegexFSA {
 		return this.formatRegex();
 	}
 	
+	private static List<Character> lOfS(String s) {
+		List<Character> l = new ArrayList<Character>();
+		char[] ca = s.toCharArray();
+		for (int i = 0; i < s.length(); i++)
+			l.add(ca[i]);
+		return l;
+	}
+	
 	public static void main(String[] args) throws TimeoutException {
-		// Test toSFARegex
-		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*(\\s[A-Z][a-z]*)*"; 	// modified from SynthBench for experimenting
-		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		System.out.println(CONFERENCE_NAME.toDotString(ba));
-		
-		RegexFSA regexFSA = new RegexFSA(CONFERENCE_NAME);
-		System.out.println(regexFSA.toRegex());
-		
-		
 		String CONFERENCE_ACRONYM_REGEX = "[A-Z][A-Z]*";
 		SFA<CharPred, Character> CONFERENCE_ACRONYM = (new SFAprovider(CONFERENCE_ACRONYM_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		System.out.println(CONFERENCE_ACRONYM.toDotString(ba));
 		
-		regexFSA = new RegexFSA(CONFERENCE_ACRONYM);
+		RegexFSA regexFSA = new RegexFSA(CONFERENCE_ACRONYM);
 		System.out.println(regexFSA.toRegex());
 		
+		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*"; 	// modified from SynthBench for experimenting
+		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
+		assertTrue(CONFERENCE_NAME.accepts(lOfS("Principles Of Programming Languages"), ba));
+		System.out.println(CONFERENCE_NAME.toDotString(ba));
 		
-		String AMOUNT_EXTRACTED_REGEX = "[0-9][a-zA-Z 0-9]*";
-		SFA<CharPred, Character> AMOUNT_EXTRACTED = (new SFAprovider(AMOUNT_EXTRACTED_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		System.out.println(AMOUNT_EXTRACTED.toDotString(ba));
-		
-		regexFSA = new RegexFSA(AMOUNT_EXTRACTED);
-		System.out.println(regexFSA.toRegex());
+		regexFSA = new RegexFSA(CONFERENCE_NAME);
+		CONFERENCE_NAME_REGEX = regexFSA.toRegex();
+		System.out.println(CONFERENCE_NAME_REGEX);
 	}
 	
 }
