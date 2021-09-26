@@ -41,7 +41,7 @@ import utilities.Pair;
 import utilities.SFAprovider;
 import utilities.Triple;
 
-public class SFTBench {
+public class SFTRepairBench {
 	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	
 	/* Benchmarks from: https://www.doc.ic.ac.uk/~livshits/papers/pdf/popl12.pdf 

@@ -93,12 +93,12 @@ public class SFTSynthBench {
 	
 	/* QuicktimePadder: requires memory? or non-determinism? */
 	
-	
+	@Test
 	public void escapeQuotesSynthesis() throws TimeoutException, IOException {
-		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = SFTBench.mkEscapeQuotesBuggy();
+		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = SFTRepairBench.mkEscapeQuotesBuggy();
 		System.out.println(EscapeQuotesBuggy.toDotString(ba));
 		
-		SFT<CharPred, CharFunc, Character> EscapeQuotes = SFTBench.mkEscapeQuotes();
+		SFT<CharPred, CharFunc, Character> EscapeQuotes = SFTRepairBench.mkEscapeQuotes();
 		System.out.println(EscapeQuotes.toDotString(ba));
 		
 		SFA<CharPred, Character> inputLang = EscapeQuotesBuggy.getDomain(ba);
@@ -189,7 +189,7 @@ public class SFTSynthBench {
 		return SFT.MkSFT(transitions16, 0, finStatesAndTails16, ba);
 	}
 
-	@Test
+	
 	public void finiteEscapeQuotesBuggyRepair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkFiniteEscapeQuotesBuggy();
 		System.out.println(EscapeQuotesBuggy.toDotString(ba));
@@ -259,7 +259,7 @@ public class SFTSynthBench {
 	
 	
 	public void escapeBracketsSynthesis() throws TimeoutException, IOException {
-		SFT<CharPred, CharFunc, Character> EscapeBrackets = SFTBench.mkEscapeBrackets();
+		SFT<CharPred, CharFunc, Character> EscapeBrackets = SFTRepairBench.mkEscapeBrackets();
 		System.out.println(EscapeBrackets.toDotString(ba));
 		
 		SFA<CharPred, Character> inputLang = EscapeBrackets.getDomain(ba);

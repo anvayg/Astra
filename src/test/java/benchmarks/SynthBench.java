@@ -86,7 +86,7 @@ public class SynthBench {
 	/* extr_num */
 	
 	public void extrNum() throws TimeoutException {
-		String PHONENUMBERHIDDEN_REGEX = "[a-zA-Z\\s]*[0-9][0-9][0-9]-[0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][a-zA-Z\\s]*";
+		String PHONENUMBERHIDDEN_REGEX = "[a-zA-Z ]*[0-9][0-9][0-9]-[0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][a-zA-Z ]*";
 		SFA<CharPred, Character> PHONENUMBERHIDDEN = (new SFAprovider(PHONENUMBERHIDDEN_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(PHONENUMBERHIDDEN.accepts(lOfS("asdfscxv as df415-342-3622 asdfasdf v a"), ba));
 		
@@ -131,11 +131,11 @@ public class SynthBench {
 	/* extr_quant */
 	
 	public void extrQuant() throws TimeoutException {
-		String THINGANDAMOUNT_REGEX = "[a-zA-Z\\s]*[0-9][a-zA-Z\\s0-9]*";
+		String THINGANDAMOUNT_REGEX = "[a-zA-Z ]*[0-9][a-zA-Z 0-9]*";
 		SFA<CharPred, Character> THINGANDAMOUNT = (new SFAprovider(THINGANDAMOUNT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(THINGANDAMOUNT.accepts(lOfS("hey look we sure have a lot of corn we have 35 OZ"), ba));
 		
-		String AMOUNT_EXTRACTED_REGEX = "[0-9][a-zA-Z\\s0-9]*";
+		String AMOUNT_EXTRACTED_REGEX = "[0-9][a-zA-Z 0-9]*";
 		SFA<CharPred, Character> AMOUNT_EXTRACTED = (new SFAprovider(AMOUNT_EXTRACTED_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(AMOUNT_EXTRACTED.accepts(lOfS("35 OZ"), ba));
 		
@@ -155,7 +155,7 @@ public class SynthBench {
 		SFA<CharPred, Character> NON_NORMALIZED_TEXT = (new SFAprovider(NON_NORMALIZED_TEXT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(NON_NORMALIZED_TEXT.accepts(lOfS("Fix     spaces"), ba));
 		
-		String NORMALIZED_TEXT_REGEX = "[a-zA-Z0-9]+(\s[a-zA-Z0-9]+)*";
+		String NORMALIZED_TEXT_REGEX = "[a-zA-Z0-9]+( [a-zA-Z0-9]+)*";
 		SFA<CharPred, Character> NORMALIZED_TEXT = (new SFAprovider(NORMALIZED_TEXT_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
 		assertTrue(NORMALIZED_TEXT.accepts(lOfS("Fix spaces"), ba));
 		
@@ -169,7 +169,7 @@ public class SynthBench {
 	
 	
 	/* normalize_name_position */
-	
+	@Test
 	public void normalizeNamePosition() throws TimeoutException {	// modified
 		String ROW_REGEX = "NAME: ([A-Z][a-z]*) TITLE: ([A-Z][a-z]*)";
 		SFA<CharPred, Character> ROW = (new SFAprovider(ROW_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
@@ -346,7 +346,7 @@ public class SynthBench {
 		ConstraintsTestSymbolic.customConstraintsTest(DOT, COMMA, 1, 1, fraction, examples, null, false);
 	}
 	
-	@Test
+	
 	public void formatPhoneNumber() throws TimeoutException {
 		String NUMBER_REGEX = "[0-9]{10}";
 		SFA<CharPred, Character> NUMBER = (new SFAprovider(NUMBER_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
