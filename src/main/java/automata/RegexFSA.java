@@ -118,7 +118,7 @@ public class RegexFSA {
 			for (FSAMove<RegexNode> t : transitions) {
 				StringBuilder regexString = new StringBuilder();
 				
-				t.input.toString(regexString);
+				prettyPrint(t.input, regexString, null, 0);
 				sb.append(String.format("%s -> %s [label=\"%s\"]\n", t.from, t.to, regexString.toString()));
 			}
 		}
@@ -348,8 +348,9 @@ public class RegexFSA {
 	}
 	
 	// Recurse over the structure of the RegexNode
-	public void prettyPrint(RegexNode r, StringBuilder sb, String printMode) {
+	public void prettyPrint(RegexNode r, StringBuilder sb, String printMode, int depth) {
 		// Going with the instanceOf approach since every other solution seems clunky as well
+		// Not using depth currently
 		
 		if (sb == null)
 			sb = new StringBuilder();
@@ -360,9 +361,9 @@ public class RegexFSA {
 			RegexNode myRegex2 = regex.getMyRegex2();
 			
 			sb.append("(");
-			prettyPrint(myRegex1, sb, printMode);
+			prettyPrint(myRegex1, sb, printMode, depth++);
 			sb.append(" | ");
-			prettyPrint(myRegex2, sb, printMode);
+			prettyPrint(myRegex2, sb, printMode, depth++);
 			sb.append(")");
 			
 		} else if (r instanceof ConcatenationNode) {
@@ -372,23 +373,28 @@ public class RegexFSA {
 			if (concatList.size() == 0)
 				sb.append("\"\"");
 			
+			if (concatList.size() > 1)
+				sb.append("(");
+			
 			Iterator<RegexNode> it = concatList.iterator();
 			while (it.hasNext()) {
 				RegexNode r1 = it.next();
-				prettyPrint(r1, sb, printMode);
+				prettyPrint(r1, sb, printMode, depth++);
 				
 				if (printMode != null && printMode.equals("lenses") && it.hasNext()) {
 					sb.append(" . ");
 				}
 			}
 			
+			if (concatList.size() > 1)
+				sb.append(")");
+			
 		} else if (r instanceof StarNode) {
 			StarNode regex = (StarNode) r;
 			RegexNode myRegex1 = regex.getMyRegex1();
 			
-			sb.append("(");
-			prettyPrint(myRegex1, sb, printMode);
-			sb.append(")*");
+			prettyPrint(myRegex1, sb, printMode, depth++);
+			sb.append("*");
 			
 		} else if (r instanceof CharacterClassNode) {
 			CharacterClassNode regex = (CharacterClassNode) r;
@@ -396,7 +402,7 @@ public class RegexFSA {
 			
 			sb.append("[");
 			for (IntervalNode i : intervalsList) {
-				prettyPrint(i, sb, printMode);
+				prettyPrint(i, sb, printMode, depth++);
 			}
 			sb.append("]");
 		
@@ -407,12 +413,12 @@ public class RegexFSA {
 			String mode = regex.getMode();
 			
 			if (mode.equals("single")) {
-				prettyPrint(myChar1, sb, mode);
+				prettyPrint(myChar1, sb, mode, depth++);
 			} else {
 				myChar2 = regex.getChar2();
-				prettyPrint(myChar1, sb, mode);
+				prettyPrint(myChar1, sb, mode, depth++);
 				sb.append("-");
-				prettyPrint(myChar2, sb, mode);
+				prettyPrint(myChar2, sb, mode, depth++);
 			}	
 			
 		} else if (r instanceof NormalCharNode) {
@@ -435,9 +441,13 @@ public class RegexFSA {
 		
 	}
 	
+	/* Returns the equivalent regular expression of a regexFSA */
 	public String toRegex() {
 		this.stateElimination();
-		return this.formatRegex();
+		
+		StringBuilder sb = new StringBuilder();
+		prettyPrint(getRegexNode(), sb, "lenses", 0);
+		return sb.toString();
 	}
 	
 	private static List<Character> lOfS(String s) {
@@ -449,20 +459,14 @@ public class RegexFSA {
 	}
 	
 	public static void main(String[] args) throws TimeoutException {
-		String CONFERENCE_NAME_REGEX = "([A-Z][a-z]*)*"; 	// modified from SynthBench for experimenting
+		String CONFERENCE_NAME_REGEX = "[A-Z][a-z]*( [A-Z][a-z]*)*";
 		SFA<CharPred, Character> CONFERENCE_NAME = (new SFAprovider(CONFERENCE_NAME_REGEX, ba)).getSFA().removeEpsilonMoves(ba);
-		assertTrue(CONFERENCE_NAME.accepts(lOfS("PrinciplesOfProgrammingLanguages"), ba));
+		assertTrue(CONFERENCE_NAME.accepts(lOfS("Principles Of Programming Languages"), ba));
 		System.out.println(CONFERENCE_NAME.toDotString(ba));
 		
 		RegexFSA regexFSA = new RegexFSA(CONFERENCE_NAME);
 		CONFERENCE_NAME_REGEX = regexFSA.toRegex();
 		System.out.println(CONFERENCE_NAME_REGEX);
-		
-		regexFSA = new RegexFSA(CONFERENCE_NAME);
-		StringBuilder sb = new StringBuilder();
-		regexFSA.stateElimination();
-		regexFSA.prettyPrint(regexFSA.getRegexNode(), sb, "lenses");
-		System.out.println(sb.toString());
 	}
 	
 }
