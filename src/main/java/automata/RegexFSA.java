@@ -216,19 +216,54 @@ public class RegexFSA {
 					
 					RegexNode regexIn = transitionIn.input;
 					RegexNode regexOut = transitionOut.input;
+					
+					if (regexIn instanceof ConcatenationNode) {
+						List<RegexNode> l = ((ConcatenationNode) regexIn).getList();
+						if (l.size() == 0) 	// epsilon
+							regexIn = null;
+					}
+					
+					if (regexOut instanceof ConcatenationNode) {
+						List<RegexNode> l = ((ConcatenationNode) regexOut).getList();
+						if (l.size() == 0) 	// epsilon
+							regexOut = null;
+					}
+					
 					RegexNode newRegex = null;
 					
-					if (selfLoop != null) {
+					if (selfLoop != null && regexIn != null && regexOut != null) {
 						LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
 						concatList.add(regexIn);
 						concatList.add(selfLoop);
 						concatList.add(regexOut);
 						newRegex = new ConcatenationNode(concatList);
-					} else {
+						
+					} else if (selfLoop != null && regexIn != null) {
+						LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
+						concatList.add(regexIn);
+						concatList.add(selfLoop);
+						newRegex = new ConcatenationNode(concatList);
+						
+					} else if (selfLoop != null && regexOut != null) {
+						LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
+						concatList.add(selfLoop);
+						concatList.add(regexOut);
+						newRegex = new ConcatenationNode(concatList);
+						
+					} else if (regexIn != null && regexOut != null) {
 						LinkedList<RegexNode> concatList = new LinkedList<RegexNode>();
 						concatList.add(regexIn);
 						concatList.add(regexOut);
 						newRegex = new ConcatenationNode(concatList);
+						
+					} else if (regexIn != null) {
+						newRegex = regexIn;
+						
+					} else if (regexOut != null) {
+						newRegex = regexOut;
+						
+					} else {
+						newRegex = epsilon;
 					}
 					
 					newTransitions.add(new FSAMove<RegexNode>(newFrom, newTo, newRegex));
@@ -394,7 +429,11 @@ public class RegexFSA {
 			RegexNode myRegex1 = regex.getMyRegex1();
 			
 			prettyPrint(myRegex1, sb, printMode, depth++);
-			sb.append("*");
+			if (printMode != null && printMode.equals("lenses")) {
+				sb.append("* ");
+			} else {
+				sb.append("*");
+			}
 			
 		} else if (r instanceof CharacterClassNode) {
 			CharacterClassNode regex = (CharacterClassNode) r;
