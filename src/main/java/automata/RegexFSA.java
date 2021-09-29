@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -14,6 +15,7 @@ import org.sat4j.specs.TimeoutException;
 
 import com.google.common.collect.ImmutableList;
 
+import RegexParser.CharNode;
 import RegexParser.CharacterClassNode;
 import RegexParser.ConcatenationNode;
 import RegexParser.FormulaNode;
@@ -332,10 +334,105 @@ public class RegexFSA {
 		return regexString;
 	}
 	
-	// TODO
-	public String prettyPrintLenses() {
+	/* 
+	 * Should be called post state-elimination
+	 */
+	public RegexNode getRegexNode() {
+		Collection<FSAMove<RegexNode>> transition = regexAut.getTransitionsFrom(regexAut.getInitialState());
+		
+		for (FSAMove<RegexNode> t : transition) {
+			return t.input;
+		}
 		
 		return null;
+	}
+	
+	// Recurse over the structure of the RegexNode
+	public void prettyPrint(RegexNode r, StringBuilder sb, String printMode) {
+		// Going with the instanceOf approach since every other solution seems clunky as well
+		
+		if (sb == null)
+			sb = new StringBuilder();
+		
+		if (r instanceof UnionNode) {
+			UnionNode regex = (UnionNode) r;
+			RegexNode myRegex1 = regex.getMyRegex1();
+			RegexNode myRegex2 = regex.getMyRegex2();
+			
+			sb.append("(");
+			prettyPrint(myRegex1, sb, printMode);
+			sb.append(" | ");
+			prettyPrint(myRegex2, sb, printMode);
+			sb.append(")");
+			
+		} else if (r instanceof ConcatenationNode) {
+			ConcatenationNode regex = (ConcatenationNode) r;
+			List<RegexNode> concatList = regex.getList();
+			
+			if (concatList.size() == 0)
+				sb.append("\"\"");
+			
+			Iterator<RegexNode> it = concatList.iterator();
+			while (it.hasNext()) {
+				RegexNode r1 = it.next();
+				prettyPrint(r1, sb, printMode);
+				
+				if (printMode != null && printMode.equals("lenses") && it.hasNext()) {
+					sb.append(" . ");
+				}
+			}
+			
+		} else if (r instanceof StarNode) {
+			StarNode regex = (StarNode) r;
+			RegexNode myRegex1 = regex.getMyRegex1();
+			
+			sb.append("(");
+			prettyPrint(myRegex1, sb, printMode);
+			sb.append(")*");
+			
+		} else if (r instanceof CharacterClassNode) {
+			CharacterClassNode regex = (CharacterClassNode) r;
+			List<IntervalNode> intervalsList = regex.getIntervals();
+			
+			sb.append("[");
+			for (IntervalNode i : intervalsList) {
+				prettyPrint(i, sb, printMode);
+			}
+			sb.append("]");
+		
+		} else if (r instanceof IntervalNode) {
+			IntervalNode regex = (IntervalNode) r;
+			CharNode myChar1 = regex.getChar1();
+			CharNode myChar2 = null;
+			String mode = regex.getMode();
+			
+			if (mode.equals("single")) {
+				prettyPrint(myChar1, sb, mode);
+			} else {
+				myChar2 = regex.getChar2();
+				prettyPrint(myChar1, sb, mode);
+				sb.append("-");
+				prettyPrint(myChar2, sb, mode);
+			}	
+			
+		} else if (r instanceof NormalCharNode) {
+			NormalCharNode regex = (NormalCharNode) r;
+			char myChar = regex.getChar();
+			
+			sb.append(myChar);
+			
+		} else if (r instanceof MetaCharNode) {
+			MetaCharNode regex = (MetaCharNode) r;
+			char myChar = regex.getChar();
+			
+			sb.append("\\");
+			sb.append(myChar);
+			
+		} else {
+			throw new IllegalArgumentException("This RegexNode is currently not supported.");
+			
+		}
+		
 	}
 	
 	public String toRegex() {
@@ -360,6 +457,12 @@ public class RegexFSA {
 		RegexFSA regexFSA = new RegexFSA(CONFERENCE_NAME);
 		CONFERENCE_NAME_REGEX = regexFSA.toRegex();
 		System.out.println(CONFERENCE_NAME_REGEX);
+		
+		regexFSA = new RegexFSA(CONFERENCE_NAME);
+		StringBuilder sb = new StringBuilder();
+		regexFSA.stateElimination();
+		regexFSA.prettyPrint(regexFSA.getRegexNode(), sb, "lenses");
+		System.out.println(sb.toString());
 	}
 	
 }
