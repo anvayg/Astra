@@ -405,8 +405,10 @@ public class RegexFSA {
 			ConcatenationNode regex = (ConcatenationNode) r;
 			List<RegexNode> concatList = regex.getList();
 			
-			if (concatList.size() == 0)
-				sb.append("\"\"");
+			if (concatList.size() == 0) {
+				if (printMode != null && printMode == "lenses") sb.append("\"\"");
+				else sb.append("()");
+			}
 			
 			if (concatList.size() > 1)
 				sb.append("(");
@@ -428,11 +430,14 @@ public class RegexFSA {
 			StarNode regex = (StarNode) r;
 			RegexNode myRegex1 = regex.getMyRegex1();
 			
+			if (printMode == null)
+				sb.append("(");
+			
 			prettyPrint(myRegex1, sb, printMode, depth++);
 			if (printMode != null && printMode.equals("lenses")) {
 				sb.append("* ");
 			} else {
-				sb.append("*");
+				sb.append(")*");
 			}
 			
 		} else if (r instanceof CharacterClassNode) {
@@ -452,12 +457,12 @@ public class RegexFSA {
 			String mode = regex.getMode();
 			
 			if (mode.equals("single")) {
-				prettyPrint(myChar1, sb, mode, depth++);
+				prettyPrint(myChar1, sb, printMode, depth++);
 			} else {
 				myChar2 = regex.getChar2();
-				prettyPrint(myChar1, sb, mode, depth++);
+				prettyPrint(myChar1, sb, printMode, depth++);
 				sb.append("-");
-				prettyPrint(myChar2, sb, mode, depth++);
+				prettyPrint(myChar2, sb, printMode, depth++);
 			}	
 			
 		} else if (r instanceof NormalCharNode) {
@@ -477,15 +482,14 @@ public class RegexFSA {
 			throw new IllegalArgumentException("This RegexNode is currently not supported.");
 			
 		}
-		
 	}
 	
 	/* Returns the equivalent regular expression of a regexFSA */
-	public String toRegex() {
+	public String toRegex(String printMode) {
 		this.stateElimination();
-		
+
 		StringBuilder sb = new StringBuilder();
-		prettyPrint(getRegexNode(), sb, "lenses", 0);
+		prettyPrint(getRegexNode(), sb, printMode, 0);
 		return sb.toString();
 	}
 	
@@ -504,7 +508,7 @@ public class RegexFSA {
 		System.out.println(CONFERENCE_NAME.toDotString(ba));
 		
 		RegexFSA regexFSA = new RegexFSA(CONFERENCE_NAME);
-		CONFERENCE_NAME_REGEX = regexFSA.toRegex();
+		CONFERENCE_NAME_REGEX = regexFSA.toRegex(null);
 		System.out.println(CONFERENCE_NAME_REGEX);
 	}
 	

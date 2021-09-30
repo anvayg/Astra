@@ -22,7 +22,8 @@ public class GenerateRegexBenchmarks {
 	
 	private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 	
-	public static void generateRegexBenchmark(String inputFilename, String benchmarkName, String outputFilename) throws TimeoutException, IOException {
+	public static void generateRegexBenchmark(String inputFilename, String benchmarkName, String outputFilename, 
+			String outputDirectory, String printMode) throws TimeoutException, IOException {
 		File file = new File(inputFilename);
 		Scanner sc = null;
 		try {
@@ -66,19 +67,19 @@ public class GenerateRegexBenchmarks {
 		// Re-convert to regex
 		RegexFSA sourceRegexFSA = new RegexFSA(source);
 		try {
-			sourceRegex = sourceRegexFSA.toRegex();
+			sourceRegex = sourceRegexFSA.toRegex(printMode);
 		} catch (Error e) {
 			System.out.println(benchmarkName);
 			System.out.println(e.toString());
 		}
 		
 		RegexFSA targetRegexFSA = new RegexFSA(target);
-		targetRegex = targetRegexFSA.toRegex();
+		targetRegex = targetRegexFSA.toRegex(printMode);
 		
 		if (outputFilename == null) {
-			outputFilename = "src/test/java/benchmarks/regexBenchmarks/" + benchmarkName;
+			outputFilename = outputDirectory + benchmarkName;
 		} else {
-			outputFilename = "src/test/java/benchmarks/regexBenchmarks/" + outputFilename;
+			outputFilename = outputDirectory + outputFilename;
 		}
 		
 		// Write benchmark
@@ -102,12 +103,16 @@ public class GenerateRegexBenchmarks {
 		try {
 			// Benchmarks directory
 			File directoryPath = new File("src/test/java/benchmarks/Benchmarks");
-		      
+		    
 			// List of all benchmarks
 		    File filesList[] = directoryPath.listFiles();
 			
 		    for(File file : filesList) {
-		    	generateRegexBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName(), null);
+		    	generateRegexBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName(), null, "src/test/java/benchmarks/RegexBenchmarksLenses/", "lenses");
+		    }
+		    
+		    for(File file : filesList) {
+		    	generateRegexBenchmark("src/test/java/benchmarks/Benchmarks/" + file.getName(), file.getName(), null, "src/test/java/benchmarks/RegexBenchmarks/", null);
 		    }
 		    
 		} catch (Exception e) {
