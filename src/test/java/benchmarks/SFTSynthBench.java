@@ -127,7 +127,7 @@ public class SFTSynthBench {
 				Driver.runAlgorithm(source, target, 2, 2, fraction, examples, null, null, null, null, "src/test/java/benchmarks/Outputs/escapeQuotes_out", "escapeQuotesSynth");
 	}
 	
-	private static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotesBuggy() throws TimeoutException {
+	public static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotesBuggy() throws TimeoutException {
 		List<SFTMove<CharPred, CharFunc, Character>> transitions16 = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
 		CharPred quotes = new CharPred('\"');
 		CharPred backslash = new CharPred('\\');
@@ -159,7 +159,7 @@ public class SFTSynthBench {
 		return SFT.MkSFT(transitions16, 0, finStatesAndTails16, ba);
 	}
 	
-	private static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotes() throws TimeoutException {
+	public static SFT<CharPred, CharFunc, Character> mkFiniteEscapeQuotes() throws TimeoutException {
 		List<SFTMove<CharPred, CharFunc, Character>> transitions16 = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
 		CharPred quotes = new CharPred('\"');
 		CharPred backslash = new CharPred('\\');

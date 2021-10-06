@@ -9,12 +9,12 @@ public class RunSingleBenchmark {
 	public static void main(String[] args) {
 		try {
 			// Benchmarks directory
-			File directoryPath = new File("src/test/java/benchmarks/Benchmarks/");
+			String directoryPath = args[0];
 		      
 			// Benchmark to run
-		    String benchmark = args[0];
+		    String benchmark = args[1];
 			
-		    RunBenchmarks.runBenchmark("src/test/java/benchmarks/Benchmarks/" + benchmark, benchmark, null);
+		    RunBenchmarks.runBenchmark(directoryPath + benchmark, benchmark, null);
 		    
 		} catch (Exception e) {
 			e.printStackTrace();

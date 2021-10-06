@@ -169,6 +169,28 @@ public class Driver {
 			ftTemplate = new FSTTemplate(sftTemplate, minterms, idToMinterm, mintermToId);
 		}
 		
+		// If stats are needed, write to filename
+		if (filename != null) {
+			BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
+
+			if (benchmarkName != null) {
+				br.write(benchmarkName + " statistics:\n");
+			}
+
+			br.write("States in source: " + source.stateCount() + "\n");
+			br.write("States in target: " + target.stateCount() + "\n");
+			br.write("Transitions in source: " + source.getTransitionCount() + "\n");
+			br.write("Transitions in target: " + target.getTransitionCount() + "\n");
+			br.write("Transitions in sourceFinite: " + sourceFinite.getTransitionCount() + "\n");
+			br.write("Transitions in targetFinite: " + targetFinite.getTransitionCount() + "\n");
+			br.write("Size of alphabet: " + alphabetMap.size() + "\n");
+			br.write("Number of examples: " + examples.size() + "\n");
+			if (ftTemplate != null) {
+				br.write("Number of bad transitions localized: " + ftTemplate.getBadTransitions().size() + "\n");
+			}
+			br.close();
+		}
+		
 		// Variables to be set later
 		SFT<CharPred, CharFunc, Character> mySFT = null;
 		SFT<CharPred, CharFunc, Character> mySFT2 = null;
@@ -190,6 +212,7 @@ public class Driver {
 		try {
 			res = future.get(300L, TimeUnit.SECONDS);
 		} catch (Exception e) {
+			System.out.println(e);
 			if (filename != null) {
 				BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
 				
@@ -197,8 +220,8 @@ public class Driver {
 					br.write(benchmarkName + " failed because of exception: " + e.toString());
 					br.close();
 				}
-			return null;
 			}
+			return null;
 		} finally {
 		    executor.shutdownNow();
 		}
@@ -275,22 +298,6 @@ public class Driver {
 		// If stats are needed, write to filename
 		if (filename != null) {
 			BufferedWriter br = new BufferedWriter(new FileWriter(new File(filename), true));
-			
-			if (benchmarkName != null) {
-				br.write(benchmarkName + " statistics:\n");
-			}
-			
-			br.write("States in source: " + source.stateCount() + "\n");
-			br.write("States in target: " + target.stateCount() + "\n");
-			br.write("Transitions in source: " + source.getTransitionCount() + "\n");
-			br.write("Transitions in target: " + target.getTransitionCount() + "\n");
-			br.write("Transitions in sourceFinite: " + sourceFinite.getTransitionCount() + "\n");
-			br.write("Transitions in targetFinite: " + targetFinite.getTransitionCount() + "\n");
-			br.write("Size of alphabet: " + alphabetMap.size() + "\n");
-			br.write("Number of examples: " + examples.size() + "\n");
-			if (ftTemplate != null) {
-				br.write("Number of bad transitions localized: " + ftTemplate.getBadTransitions().size() + "\n");
-			}
 			
 			br.write("SFT1 solving time: " + solvingTime1 + "\n");
 			if (mySFT2restricted != null) {
