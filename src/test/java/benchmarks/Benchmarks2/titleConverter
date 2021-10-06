@@ -1,7 +1,7 @@
 <Field Id=1>[a-zA-Z\s0-9]*</Field>
-"title"="[a-zA-Z\s0-9][a-zA-Z\s0-9]*"
+"title"="[a-zA-Z\s0-9][a-zA-Z\s0-9]*",
 <Field Id=1>title</Field>
-"title"="title"
+"title"="title",
 
 3
 1
