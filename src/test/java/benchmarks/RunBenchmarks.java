@@ -135,7 +135,7 @@ public class RunBenchmarks {
 		
 		// Call solver
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, 0, fraction, examples, null, null, null, null, outputFilename, benchmarkName);
 	}
 	
 	
@@ -188,7 +188,7 @@ public class RunBenchmarks {
 		
 		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, sftTemplate, minterms, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, 0, fraction, examples, null, sftTemplate, minterms, null, outputFilename, benchmarkName);
 		
 		if (result == null) return;
 		
@@ -216,9 +216,11 @@ public class RunBenchmarks {
 	
 	
 	/* Repairing from the output language */
-	public static void runRepairBenchmarkOutput(SFT<CharPred, CharFunc, Character> aut, SFA<CharPred, Character> source, 
-			SFA<CharPred, Character> target, int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
-			SFA<CharPred, Character> template, String benchmarkName, String outputFilename) throws TimeoutException, IOException {
+	public static void runRepairBenchmarkOutput(SFT<CharPred, CharFunc, Character> aut, 
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
+			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
+			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
+			SFTTemplate sftTemplate, String benchmarkName, String outputFilename) throws TimeoutException, IOException {
 		
 		if (outputFilename == null) {
 			outputFilename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
@@ -228,14 +230,55 @@ public class RunBenchmarks {
 		BufferedWriter br = new BufferedWriter(new FileWriter(new File(outputFilename)));
 		br.write("Running benchmark\n");
 		br.close();
+		
+		if (source == null) {	// Note: not doing preimage computation as of now
+			SFA<CharPred, Character> inputLang = aut.getDomain(ba);
+			
+			if (sftTemplate != null) {
+				source = inputLang;
+				
+			} else {
+				// remove badTransitions from aut
+				aut = SFTOperations.removeTransitions(aut, badTransitions);
+
+				// compute source = original input - correct input
+				SFA<CharPred, Character> correctInputSet = aut.getDomain(ba);
+				source = inputLang.minus(correctInputSet, ba);
+			}
+		}
+			// else assume that aut is already restricted
+		
+		
+		// Un-normalize source and target using minterms
+		if (minterms != null) {
+			Pair<SFA<CharPred, Character>, SFA<CharPred, Character>> unnormalized = SFAOperations.unnormalize(source, target, minterms, ba);
+			source = unnormalized.first;
+			if (!source.isDeterministic(ba)) {
+				source = source.determinize(ba);
+			}
+			target = unnormalized.second;
+			if (!target.isDeterministic(ba)) {
+				target = target.determinize(ba);
+			}
+		}
+		
+		System.out.println(source.toDotString(ba));
+		System.out.println(target.toDotString(ba));
+		
+		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(source, target, numStates, outputBound, fraction, examples, null, null, null, null, outputFilename, benchmarkName);
+				Driver.runAlgorithm(source, target, numStates, outputBound, 0, fraction, examples, null, sftTemplate, minterms, null, outputFilename, benchmarkName);
+		
+		if (result == null) return;
+		
 		SFT<CharPred, CharFunc, Character> mySFT = result.first.second;
-		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second is the pair is the restricted SFT
+		SFT<CharPred, CharFunc, Character> mySFT2 = result.second.second; 	// The second in the pair is the restricted SFT
 		String witness = result.third;
 
+		if (sftTemplate != null)
+			return;
+		
 		SFT<CharPred, CharFunc, Character> mySFTrepair = aut.composeWith(mySFT, ba);
-		System.out.println(mySFTrepair.toDotString(ba));
 
 		br = new BufferedWriter(new FileWriter(new File(outputFilename), true));
 		br.write("SFTrepair1:\n");

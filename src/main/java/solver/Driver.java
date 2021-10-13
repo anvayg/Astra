@@ -114,10 +114,10 @@ public class Driver {
 	
 	public static Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> 
 	runAlgorithm(SFA<CharPred, Character> source, SFA<CharPred, Character> target, 
-			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
-			SFA<CharPred, Character> template, SFTTemplate sftTemplate, 
-			Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, String filename, 
-			String benchmarkName) throws TimeoutException, IOException {
+			int numStates, int outputBound, int numLookaheadStates, int[] fraction, 
+			List<Pair<String, String>> examples, SFA<CharPred, Character> template, 
+			SFTTemplate sftTemplate, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, ArrayList<Boolean> config, 
+			String filename, String benchmarkName) throws TimeoutException, IOException {
 		HashMap<String, String> cfg = new HashMap<String, String>();
         cfg.put("model", "true");
         Context ctx = new Context(cfg);

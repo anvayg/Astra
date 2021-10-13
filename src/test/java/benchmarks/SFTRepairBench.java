@@ -106,8 +106,8 @@ public class SFTRepairBench {
 		return SFT.MkSFT(transitions17, 0, finStatesAndTails17, ba);
 	}
 	
-	
-	public void escapeQuotesBuggyRepair() throws TimeoutException {
+	@Test
+	public void escapeQuotesBuggyRepair() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> EscapeQuotesBuggy = mkEscapeQuotesBuggy();
 		System.out.println(EscapeQuotesBuggy.toDotString(ba));
 		
@@ -137,6 +137,25 @@ public class SFTRepairBench {
 				
 		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(synthSFT, ba);
 		System.out.println(repairSFT.toDotString(ba));
+		
+		
+		/* Template */
+		examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("ab\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\\\ab", "ab\\\\ab"));
+		examples.add(new Pair<String, String>("ab\\\"ab", "ab\\\"ab"));
+		examples.add(new Pair<String, String>("ab\\ab", "ab\\ab"));
+		examples.add(new Pair<String, String>("\\", "\\"));
+		
+		// localization
+        Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(EscapeQuotesBuggy, examples);
+        
+        // Make template
+        SFTTemplate sftTemplate = new SFTTemplate(EscapeQuotesBuggy, badTransitions);
+        
+        // With template
+        Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(EscapeQuotesBuggy);
+        RunBenchmarks.runRepairBenchmarkOutput(EscapeQuotesBuggy, badTransitions, null, target, minterms, EscapeQuotesBuggy.stateCount(), 2, fraction, examples, null, sftTemplate, "modEscapeQuotes", "modEscapeQuotes_template");
 	}
 	
 	
@@ -427,6 +446,47 @@ public class SFTRepairBench {
 	}
 	
 	@Test
+	public void modEscapeBrackets2() throws TimeoutException, IOException {
+		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
+		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
+		
+		SFT<CharPred, CharFunc, Character> modSFT = modifiedSFTs.get(1);
+		System.out.println(modSFT.toDotString(ba));
+		
+		SFA<CharPred, Character> target = modSFT.getOverapproxOutputSFA(ba);
+		
+		Collection<Pair<CharPred, ArrayList<Integer>>> defaultMinterms = SFTOperations.getMinterms(modSFT);
+		
+		// Adding required predicates/minterms
+		Set<CharPred> preds = new HashSet<CharPred>();
+		preds.addAll(SFTOperations.getPreds(modSFT));
+		preds.addAll(SFAOperations.getPreds(target));
+		preds.add(new CharPred('g'));
+
+		ArrayList<CharPred> predsList = new ArrayList<CharPred>();
+		predsList.addAll(preds);
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = ba.GetMinterms(predsList);
+
+		int[] fraction = new int[] {4, 1};
+
+		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
+		examples.add(new Pair<String, String>("<", "&lt;"));
+		examples.add(new Pair<String, String>(">", "&gt;"));
+		examples.add(new Pair<String, String>(";gf", ""));
+		examples.add(new Pair<String, String>("&t&l", ""));
+		examples.add(new Pair<String, String>("k", ""));
+
+		// localization
+		Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(modSFT, examples);
+
+		// Default minterms, no template
+		RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, defaultMinterms, 1, 4, fraction, examples, null, "modEscapeBrackets2", "modEscapeBrackets2_default");
+
+		// Custom minterms
+		RunBenchmarks.runRepairBenchmark(modSFT, badTransitions, null, target, minterms, 1, 4, fraction, examples, null, "modEscapeBrackets2", null);
+	}
+	
+	@Test
 	public void modEscapeBrackets3() throws TimeoutException, IOException {
 		SFT<CharPred, CharFunc, Character> trans = mkEscapeBrackets();
 		List<SFT<CharPred, CharFunc, Character>> modifiedSFTs = createRepairBenchmarks(trans);
@@ -533,7 +593,7 @@ public class SFTRepairBench {
         config.add(false);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(CONFERENCE_NAME, CONFERENCE_ACRONYM, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrAcronym");
+				Driver.runAlgorithm(CONFERENCE_NAME, CONFERENCE_ACRONYM, 2, 1, 0, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrAcronym");
 	}
 	
 	/* Buggy extrAcronym2 obtained by only using example constraints */
@@ -629,7 +689,7 @@ public class SFTRepairBench {
         config.add(false);
 	    
 	    Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(UPPERCASENAME, NAME, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "capProb");
+				Driver.runAlgorithm(UPPERCASENAME, NAME, 2, 1, 0, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "capProb");
 	}
 	
 	public static SFT<CharPred, CharFunc, Character> mkBuggyCapProb() throws TimeoutException {
@@ -719,7 +779,7 @@ public class SFTRepairBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(THINGANDAMOUNT, AMOUNT_EXTRACTED, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrQuant");
+				Driver.runAlgorithm(THINGANDAMOUNT, AMOUNT_EXTRACTED, 2, 1, 0, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrQuant");
 	}
 	
 	/* Buggy extrQuant obtained when no example provided */
@@ -801,7 +861,7 @@ public class SFTRepairBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(FIRSTLASTNAME, NAME, 2, 1, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "removeLast");
+				Driver.runAlgorithm(FIRSTLASTNAME, NAME, 2, 1, 0, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "removeLast");
 	}
 	
 	/* Buggy removeLast obtained by giving 1 fewer example */
@@ -896,7 +956,7 @@ public class SFTRepairBench {
         config.add(true);
         
         Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 
-				Driver.runAlgorithm(UNCLEANED_DATA, CLEANEDODDS, 3, 2, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrOdds");
+				Driver.runAlgorithm(UNCLEANED_DATA, CLEANEDODDS, 3, 2, 0, fraction, examples, null, null, null, config, "src/test/java/benchmarks/tmpOutput", "extrOdds");
 	}
 	
 	
