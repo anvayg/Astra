@@ -155,13 +155,24 @@ public class RunBenchmarks {
 		br.write("Running benchmark\n");
 		br.close();
 		
+		SFA<CharPred, Character> outputLang = aut.getOverapproxOutputSFA(ba);
 		if (source == null) {	// Note: not doing preimage computation as of now
 			SFA<CharPred, Character> inputLang = aut.getDomain(ba);
 			
 			if (sftTemplate != null) {
 				source = inputLang;
 				
-			} else {
+			} 
+			else if (!outputLang.includedIn(target, ba)) {
+				// take pre-image
+				SFA<CharPred, Character> badOutput = outputLang.minus(target, ba);
+				source = aut.inverseImage(badOutput, ba);
+				SFA<CharPred, Character> goodInput = inputLang.minus(source, ba);
+				
+				// restrict aut
+				aut = aut.domainRestriction(goodInput, ba);
+			}
+			else {
 				// remove badTransitions from aut
 				aut = SFTOperations.removeTransitions(aut, badTransitions);
 
@@ -261,9 +272,6 @@ public class RunBenchmarks {
 				target = target.determinize(ba);
 			}
 		}
-		
-		System.out.println(source.toDotString(ba));
-		System.out.println(target.toDotString(ba));
 		
 		// Run algorithm
 		Triple<Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, Pair<SFT<CharPred, CharFunc, Character>, SFT<CharPred, CharFunc, Character>>, String> result = 

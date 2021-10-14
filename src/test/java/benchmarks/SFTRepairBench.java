@@ -114,47 +114,32 @@ public class SFTRepairBench {
 		SFT<CharPred, CharFunc, Character> EscapeQuotes = mkEscapeQuotes();
 		System.out.println(EscapeQuotes.toDotString(ba));
 		
-		SFA<CharPred, Character> outputLang = EscapeQuotesBuggy.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
-		System.out.println(outputLang.toDotString(ba));
-		
-		SFA<CharPred, Character> outputCorrect = EscapeQuotes.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
-		System.out.println(outputCorrect.toDotString(ba));
-		
-		SFA<CharPred, Character> source = outputLang;
-		SFA<CharPred, Character> target = outputCorrect;
-		System.out.println(source.includedIn(target, ba));
-		
+		SFA<CharPred, Character> target = EscapeQuotes.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
+
 		int[] fraction = new int[] {1, 1};
 		
 		List<Pair<String, String>> examples = new ArrayList<Pair<String, String>>();
-		examples.add(new Pair<String, String>("ab\\\"ab", "ab\\\"ab"));
-		examples.add(new Pair<String, String>("ab\\\\\"ab", "ab\\\"ab"));
-		examples.add(new Pair<String, String>("ab\\\\\"ab", "ab\\\"ab"));
-		examples.add(new Pair<String, String>("ab\\\\\\\\ab", "ab\\\\ab"));
-		
-		SFT<CharPred, CharFunc, Character> synthSFT = ConstraintsTestSymbolic.customConstraintsTest(source, target, 7, 1, fraction, examples, source, false);
-		System.out.println(synthSFT.toDotString(ba));
-				
-		SFT<CharPred, CharFunc, Character> repairSFT = EscapeQuotesBuggy.composeWith(synthSFT, ba);
-		System.out.println(repairSFT.toDotString(ba));
-		
-		
-		/* Template */
-		examples = new ArrayList<Pair<String, String>>();
 		examples.add(new Pair<String, String>("ab\"ab", "ab\\\"ab"));
 		examples.add(new Pair<String, String>("ab\\\\ab", "ab\\\\ab"));
 		examples.add(new Pair<String, String>("ab\\\"ab", "ab\\\"ab"));
 		examples.add(new Pair<String, String>("ab\\ab", "ab\\ab"));
 		examples.add(new Pair<String, String>("\\", "\\"));
 		
+		Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(EscapeQuotesBuggy);
+		
 		// localization
         Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions = SFTOperations.localizeFaults(EscapeQuotesBuggy, examples);
+		
+		/* Without template */
+        RunBenchmarks.runRepairBenchmark(EscapeQuotesBuggy, badTransitions, null, target, minterms, 2, 2, fraction, examples, null, "modEscapeQuotes", "modEscapeQuotes_out");
+		
+		
+		/* Template */
         
         // Make template
         SFTTemplate sftTemplate = new SFTTemplate(EscapeQuotesBuggy, badTransitions);
         
         // With template
-        Collection<Pair<CharPred, ArrayList<Integer>>> minterms = SFTOperations.getMinterms(EscapeQuotesBuggy);
         RunBenchmarks.runRepairBenchmarkOutput(EscapeQuotesBuggy, badTransitions, null, target, minterms, EscapeQuotesBuggy.stateCount(), 2, fraction, examples, null, sftTemplate, "modEscapeQuotes", "modEscapeQuotes_template");
 	}
 	
