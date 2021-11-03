@@ -215,7 +215,6 @@ private static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		assertTrue(source.accepts(lOfS("<<s<"), ba));
 		assertTrue(source.accepts(lOfS("<<s<s>"), ba));
 		assertTrue(source.accepts(lOfS("<<s<st"), ba));
-		System.out.println(source.toDotString(ba));
 	
 		SFA<CharPred, Character> target = GetTags.getOverapproxOutputSFA(ba).removeEpsilonMoves(ba).determinize(ba);
 		System.out.println(target.toDotString(ba));

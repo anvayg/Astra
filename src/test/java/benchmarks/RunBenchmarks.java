@@ -141,10 +141,10 @@ public class RunBenchmarks {
 	
 	/* Repairing from the input */
 	public static void runRepairBenchmark(SFT<CharPred, CharFunc, Character> aut, 
-			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions, SFA<CharPred, Character> source, 
-			SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, int numStates, 
-			int outputBound, int[] fraction, List<Pair<String, String>> examples, SFTTemplate sftTemplate, 
-			String benchmarkName, String outputFilename) throws TimeoutException, IOException {
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> badTransitions, Boolean preimage, 
+			SFA<CharPred, Character> source, SFA<CharPred, Character> target, Collection<Pair<CharPred, ArrayList<Integer>>> minterms, 
+			int numStates, int outputBound, int[] fraction, List<Pair<String, String>> examples, 
+			SFTTemplate sftTemplate, String benchmarkName, String outputFilename) throws TimeoutException, IOException {
 
 		if (outputFilename == null) {
 			outputFilename = "src/test/java/benchmarks/RepairBenchmarks/" + benchmarkName + "_out";
@@ -153,6 +153,8 @@ public class RunBenchmarks {
 		}
 		BufferedWriter br = new BufferedWriter(new FileWriter(new File(outputFilename)));
 		br.write("Running benchmark\n");
+		br.write("Original size of transitions: " + aut.transitionCount() + "\n");
+		if (badTransitions != null) br.write("Bad transitions: " + badTransitions.size() + "\n");
 		br.close();
 		
 		SFA<CharPred, Character> outputLang = aut.getOverapproxOutputSFA(ba);
@@ -163,14 +165,16 @@ public class RunBenchmarks {
 				source = inputLang;
 				
 			} 
-			else if (!outputLang.includedIn(target, ba)) {
+			else if (!outputLang.includedIn(target, ba) && preimage) {
 				// take pre-image
 				SFA<CharPred, Character> badOutput = outputLang.minus(target, ba);
 				source = aut.inverseImage(badOutput, ba);
 				SFA<CharPred, Character> goodInput = inputLang.minus(source, ba);
 				
 				// restrict aut
+				System.out.println(aut.toDotString(ba));
 				aut = aut.domainRestriction(goodInput, ba);
+				System.out.println(benchmarkName);
 			}
 			else {
 				// remove badTransitions from aut

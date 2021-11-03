@@ -565,8 +565,8 @@ public class ConstraintsSolver {
 		int exampleCount = 0;
 		for (Pair<String, String> ioExample : ioExamples) {
 			/* verify example */
-			if (SFAOperations.getStateInFA(source, source.getInitialState(), ioExample.first, ba) == -1) throw new IllegalArgumentException("Illegal example for source: " + ioExample.first);
-			if (SFAOperations.getStateInFA(target, target.getInitialState(), ioExample.second, ba) == -1) throw new IllegalArgumentException("Illegal example for target: " + ioExample.second);
+			if (SFAOperations.getStateInFA(source, source.getInitialState(), ioExample.first, ba) == -1) { System.err.println("Illegal example for source: " + ioExample.first); continue; } 
+			if (SFAOperations.getStateInFA(target, target.getInitialState(), ioExample.second, ba) == -1) { System.err.println("Illegal example for target: " + ioExample.second); continue; } 
 			
 			int[] inputArr = stringToIntArray(alphabetMap, ioExample.first);
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
