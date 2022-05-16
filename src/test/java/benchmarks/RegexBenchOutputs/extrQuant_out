@@ -1,0 +1,11 @@
+extrQuant
+extrQuant statistics:
+States in source: 21
+States in target: 7
+Transitions in source: 31
+Transitions in target: 10
+Transitions in sourceFinite: 49
+Transitions in targetFinite: 15
+Size of alphabet: 3
+Number of examples: 1
+extrQuant failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: ooo oooo oo oooo oooo o ooo oo oooo oo oooo 44 oo

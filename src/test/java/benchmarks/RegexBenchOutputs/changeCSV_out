@@ -1,0 +1,11 @@
+changeCSV
+changeCSV statistics:
+States in source: 37
+States in target: 25
+Transitions in source: 74
+Transitions in target: 62
+Transitions in sourceFinite: 129
+Transitions in targetFinite: 125
+Size of alphabet: 5
+Number of examples: 1
+changeCSV failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: 8. 8

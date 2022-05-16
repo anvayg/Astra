@@ -1,0 +1,53 @@
+changeCSV
+changeCSV statistics:
+States in source: 5
+States in target: 5
+Transitions in source: 9
+Transitions in target: 9
+Transitions in sourceFinite: 9
+Transitions in targetFinite: 9
+Size of alphabet: 4
+Number of examples: 1
+SFT1 solving time: 70
+SFT2 solving time: 77
+First SFT:
+digraph {
+0 [label="0"];
+0 -> 0 [label="[ ]/
+x -> x + 0"];
+0 -> 0 [label="[0-9A-Za-z]/
+x -> x + 0"];
+0 -> 0 [label="[,]/
+x -> "];
+0 -> 0 [label="[.]/
+x -> x + -2"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+2 [label="2"];
+3 [label="3", peripheries = 2];
+4 [label="4", peripheries = 2];
+0 -> 1 [label="[0-9A-Za-z]/
+x -> x + 0"];
+0 -> 2 [label="[.]/
+x -> x + -2"];
+1 -> 1 [label="[0-9A-Za-z]/
+x -> x + 0"];
+1 -> 2 [label="[.]/
+x -> x + -2"];
+2 -> 3 [label="[ ]/
+x -> x + 0"];
+3 -> 2 [label="[.]/
+x -> x + -2"];
+3 -> 4 [label="[0-9A-Za-z]/
+x -> x + 0"];
+4 -> 2 [label="[.]/
+x -> x + -2"];
+4 -> 4 [label="[0-9A-Za-z]/
+x -> x + 0"];
+}
+Synthesis time: 401
+Equivalent results
+

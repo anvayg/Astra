@@ -1,0 +1,132 @@
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 4
+SFT1 solving time: 598
+SFT2 solving time: 533
+First SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> "];
+1 -> 0 [label="[\\]/
+x -> x + 0x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> \\x + 0"];
+1 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+}
+Synthesis time: 1437
+Second SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 1137
+Input on which SFTs differ: \
+Output1: 
+Output2: \
+
+
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 4
+SFT1 solving time: 479
+SFT2 solving time: 445
+First SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+2 [label="2", peripheries = 2];
+3 [label="3", peripheries = 2];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> "];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+2 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> "];
+2 -> 3 [label="[\\]/
+x -> x + 0"];
+2 -> 0 [label="[\"\']/
+x -> x + 0"];
+3 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+3 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+3 -> 2 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 1243
+Second SFT:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+2 [label="2", peripheries = 2];
+3 [label="3", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> \'x + 0"];
+1 -> 2 [label="[\"\']/
+x -> "];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+2 -> 3 [label="[\\]/
+x -> x + 0"];
+2 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> \'x + 0"];
+2 -> 2 [label="[\"\']/
+x -> "];
+3 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+3 -> 2 [label="[\\]/
+x -> x + 0"];
+3 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+}
+Synthesis time: 920
+Input on which SFTs differ: \H
+Output1: \
+Output2: \'H
+
+

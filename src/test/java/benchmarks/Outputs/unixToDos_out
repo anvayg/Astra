@@ -1,0 +1,78 @@
+unixToDos
+unixToDos statistics:
+States in source: 5
+States in target: 7
+Transitions in source: 9
+Transitions in target: 11
+Transitions in sourceFinite: 17
+Transitions in targetFinite: 19
+Size of alphabet: 4
+Number of examples: 4
+SFT1 solving time: 774
+SFT2 solving time: 773
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 1 [label="[\\]/
+x -> x + 0x + 22"];
+0 -> 0 [label="[0-9A-Za-mo-qs-z]/
+x -> x + 0"];
+0 -> 0 [label="[r]/
+x -> x + 0"];
+0 -> 0 [label="[n]/
+x -> x + 0"];
+1 -> 0 [label="[0-9A-Za-mo-qs-z]/
+x -> r"];
+1 -> 0 [label="[r]/
+x -> x + -22"];
+1 -> 0 [label="[n]/
+x -> x + -18x + 0"];
+1 -> 1 [label="[\\]/
+x -> x + 18x + 22"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1"];
+2 [label="2", peripheries = 2];
+3 [label="3", peripheries = 2];
+4 [label="4", peripheries = 2];
+0 -> 2 [label="[n]/
+x -> x + 0"];
+0 -> 2 [label="[0-9A-Za-mo-qs-z]/
+x -> x + 0"];
+0 -> 2 [label="[r]/
+x -> x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0x + 22"];
+1 -> 3 [label="[n]/
+x -> x + -18x + 0"];
+2 -> 2 [label="[r]/
+x -> x + 0"];
+2 -> 2 [label="[n]/
+x -> x + 0"];
+2 -> 2 [label="[0-9A-Za-mo-qs-z]/
+x -> x + 0"];
+2 -> 1 [label="[\\]/
+x -> x + 0x + 22"];
+3 -> 4 [label="[0-9A-Za-mo-qs-z]/
+x -> x + 0"];
+3 -> 4 [label="[r]/
+x -> x + 0"];
+3 -> 1 [label="[\\]/
+x -> x + 0x + 22"];
+3 -> 4 [label="[n]/
+x -> x + 0"];
+4 -> 4 [label="[0-9A-Za-mo-qs-z]/
+x -> x + 0"];
+4 -> 4 [label="[r]/
+x -> x + 0"];
+4 -> 4 [label="[n]/
+x -> x + 0"];
+4 -> 1 [label="[\\]/
+x -> x + 0x + 22"];
+}
+Synthesis time: 1468
+Equivalent results
+

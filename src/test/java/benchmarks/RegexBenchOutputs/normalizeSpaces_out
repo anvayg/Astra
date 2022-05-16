@@ -1,0 +1,11 @@
+normalizeSpaces
+normalizeSpaces statistics:
+States in source: 85
+States in target: 31
+Transitions in source: 189
+Transitions in target: 49
+Transitions in sourceFinite: 250
+Transitions in targetFinite: 64
+Size of alphabet: 4
+Number of examples: 2
+normalizeSpaces failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: BBB     BBBBBB

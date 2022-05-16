@@ -1,0 +1,38 @@
+Running benchmark
+Original size of transitions: 3
+Bad transitions: 2
+modSwapCase3 statistics:
+States in source: 1
+States in target: 1
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 3
+Transitions in targetFinite: 3
+Size of alphabet: 3
+Number of examples: 2
+Number of bad transitions localized: 2
+SFT1 solving time: 22
+SFT2 solving time: 25
+First SFT:
+digraph {
+0 [label="0"];
+0 -> 0 [label="[0-9]/
+x -> x + 0"];
+0 -> 0 [label="[a-z]/
+x -> x + -32"];
+0 -> 0 [label="[A-Z]/
+x -> x + 32"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+0 -> 0 [label="[0-9]/
+x -> x + 0"];
+0 -> 0 [label="[a-z]/
+x -> x + -32"];
+0 -> 0 [label="[A-Z]/
+x -> x + 32"];
+}
+Synthesis time: 48
+Equivalent results
+

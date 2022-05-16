@@ -1,0 +1,98 @@
+Running benchmark
+Original size of transitions: 5
+Bad transitions: 3
+modEscapeQuotes statistics:
+States in source: 3
+States in target: 2
+Transitions in source: 9
+Transitions in target: 5
+Transitions in sourceFinite: 9
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 238
+SFT2 solving time: 203
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+}
+First SFT restricted:
+digraph {
+0 [label="0"];
+1 [label="1", peripheries = 2];
+2 [label="2", peripheries = 2];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 2 [label="[\\]/
+x -> x + 0"];
+1 -> 2 [label="[\"\']/
+x -> x + 0"];
+2 -> 1 [label="[\\]/
+x -> x + 0"];
+2 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+2 -> 2 [label="[\"\']/
+x -> \\x + 0"];
+}
+Synthesis time: 717
+Equivalent results
+
+SFTrepair1:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+2 [label="2"];
+3 [label="3", peripheries = 2];
+4 [label="4", peripheries = 2];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 3 [label="[\\]/
+x -> x + 0"];
+1 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 2 [label="[\"\']/
+x -> \\x + 0"];
+2 -> 2 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+2 -> 2 [label="[\"\']/
+x -> \\x + 0"];
+2 -> 3 [label="[\\]/
+x -> x + 0"];
+3 -> 4 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+3 -> 4 [label="[\"\']/
+x -> x + 0"];
+3 -> 4 [label="[\\]/
+x -> x + 0"];
+4 -> 3 [label="[\\]/
+x -> x + 0"];
+4 -> 4 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+4 -> 4 [label="[\"\']/
+x -> \\x + 0"];
+}

@@ -1,0 +1,192 @@
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 188
+SFT2 solving time: 255
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 1294
+Equivalent results
+
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 196
+SFT2 solving time: 163
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 1329
+Equivalent results
+
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 244
+SFT2 solving time: 151
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+}
+Synthesis time: 1349
+Equivalent results
+
+escapeQuotesSynth statistics:
+States in source: 2
+States in target: 2
+Transitions in source: 3
+Transitions in target: 3
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 5
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 256
+SFT2 solving time: 158
+First SFT:
+digraph {
+0 [label="0"];
+1 [label="1"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1", peripheries = 2];
+0 -> 0 [label="[\"\']/
+x -> \\x + 0"];
+0 -> 1 [label="[\\]/
+x -> x + 0"];
+0 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\\]/
+x -> x + 0"];
+1 -> 0 [label="[\u0000-!#-&\(-\[\]-\uffff]/
+x -> x + 0"];
+1 -> 0 [label="[\"\']/
+x -> x + 0"];
+}
+Synthesis time: 1158
+Equivalent results
+

@@ -1,0 +1,58 @@
+Running benchmark
+Original size of transitions: 3
+Bad transitions: 2
+modEscapeBrackets1 statistics:
+States in source: 1
+States in target: 6
+Transitions in source: 8
+Transitions in target: 16
+Transitions in sourceFinite: 8
+Transitions in targetFinite: 36
+Size of alphabet: 8
+Number of examples: 4
+Number of bad transitions localized: 7
+SFT1 solving time: 342
+SFT2 solving time: 334
+First SFT:
+digraph {
+0 [label="0"];
+0 -> 0 [label="[<]/
+x -> x + -22x + 48x + 56x + -1"];
+0 -> 0 [label="[t]/
+x -> "];
+0 -> 0 [label="[g]/
+x -> "];
+0 -> 0 [label="[>]/
+x -> x + -24x + 41x + 54x + -3"];
+0 -> 0 [label="[&]/
+x -> "];
+0 -> 0 [label="[l]/
+x -> "];
+0 -> 0 [label="[;]/
+x -> "];
+0 -> 0 [label="[\u0000-%\'-:=?-fh-km-su-\uffff]/
+x -> "];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+0 -> 0 [label="[g]/
+x -> "];
+0 -> 0 [label="[t]/
+x -> "];
+0 -> 0 [label="[\u0000-%\'-:=?-fh-km-su-\uffff]/
+x -> "];
+0 -> 0 [label="[<]/
+x -> x + -22x + 48x + 56x + -1"];
+0 -> 0 [label="[&]/
+x -> "];
+0 -> 0 [label="[;]/
+x -> "];
+0 -> 0 [label="[>]/
+x -> x + -24x + 41x + 54x + -3"];
+0 -> 0 [label="[l]/
+x -> "];
+}
+Synthesis time: 455
+Equivalent results
+

@@ -1,0 +1,10 @@
+((((([A-Z] . [a-z]) . [a-z]* ) | [A-Z]) | ((((([A-Z] . [a-z]) . [a-z]*  . [ ]) | ([A-Z] . [ ])) . [A-Z]) . ([ ] . [A-Z])* )) | (((((([A-Z] . [a-z]) . [a-z]*  . [ ]) | ([A-Z] . [ ])) . [A-Z]) . ([ ] . [A-Z])*  . [a-z]) . ([a-z] | (([ ] . [A-Z]) . ([ ] . [A-Z])*  . [a-z]))*  . ("" | (([ ] . [A-Z]) . ([ ] . [A-Z])* ))))
+((([A-Z] . [A-Z]) . [A-Z]* ) | [A-Z])
+Principles Of Programming Languages
+POPL
+Programming Language Design Implementation
+PLDI
+
+1
+1
+1/1

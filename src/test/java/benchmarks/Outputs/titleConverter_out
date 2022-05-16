@@ -1,0 +1,11 @@
+titleConverter
+titleConverter statistics:
+States in source: 22
+States in target: 13
+Transitions in source: 23
+Transitions in target: 14
+Transitions in sourceFinite: 41
+Transitions in targetFinite: 41
+Size of alphabet: 15
+Number of examples: 1
+titleConverter failed because of exception: java.util.concurrent.TimeoutException

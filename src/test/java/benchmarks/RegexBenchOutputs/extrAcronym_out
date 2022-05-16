@@ -1,0 +1,11 @@
+extrAcronym
+extrAcronym statistics:
+States in source: 35
+States in target: 7
+Transitions in source: 62
+Transitions in target: 7
+Transitions in sourceFinite: 78
+Transitions in targetFinite: 7
+Size of alphabet: 4
+Number of examples: 2
+extrAcronym failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: Mjjjjjjjjj Mj Mjjjjjjjjjj Mjjjjjjjj

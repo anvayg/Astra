@@ -1,0 +1,11 @@
+sourceToViews
+sourceToViews statistics:
+States in source: 59
+States in target: 26
+Transitions in source: 72
+Transitions in target: 36
+Transitions in sourceFinite: 103
+Transitions in targetFinite: 67
+Size of alphabet: 5
+Number of examples: 2
+sourceToViews failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: 				 								, 1111-1111, 							

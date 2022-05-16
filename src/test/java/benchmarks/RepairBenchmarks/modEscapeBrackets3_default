@@ -1,0 +1,32 @@
+Running benchmark
+Original size of transitions: 3
+Bad transitions: 1
+modEscapeBrackets3 statistics:
+States in source: 2
+States in target: 4
+Transitions in source: 6
+Transitions in target: 4
+Transitions in sourceFinite: 6
+Transitions in targetFinite: 4
+Size of alphabet: 3
+Number of examples: 5
+SFT1 solving time: 51
+Assertion failed: , &lt;
+Assertion failed: , &gt;
+UNSAT
+No other solution
+
+
+SFTrepair1:
+digraph {
+0 [label="0", peripheries = 2];
+1 [label="1"];
+0 -> 0 [label="[<]/
+x -> &lt;"];
+0 -> 0 [label="[>]/
+x -> &gt;"];
+1 -> 0 [label="[<]/
+x -> &lt;"];
+1 -> 0 [label="[>]/
+x -> &gt;"];
+}

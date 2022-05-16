@@ -1,0 +1,13 @@
+Running benchmark
+Original size of transitions: 2
+Bad transitions: 0
+modEscapeBrackets2 statistics:
+States in source: 1
+States in target: 4
+Transitions in source: 1
+Transitions in target: 4
+Transitions in sourceFinite: 1
+Transitions in targetFinite: 4
+Size of alphabet: 2
+Number of examples: 5
+modEscapeBrackets2 failed because of exception: java.util.concurrent.ExecutionException: java.lang.NullPointerException

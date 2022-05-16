@@ -1,0 +1,11 @@
+quicktimeMerger
+quicktimeMerger statistics:
+States in source: 24
+States in target: 7
+Transitions in source: 31
+Transitions in target: 8
+Transitions in sourceFinite: 31
+Transitions in targetFinite: 8
+Size of alphabet: 3
+Number of examples: 2
+quicktimeMerger failed because of exception: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: Illegal example for source: 999#

@@ -1,0 +1,62 @@
+Running benchmark
+Original size of transitions: 3
+Bad transitions: 1
+modEscapeBrackets3 statistics:
+States in source: 1
+States in target: 7
+Transitions in source: 9
+Transitions in target: 10
+Transitions in sourceFinite: 9
+Transitions in targetFinite: 15
+Size of alphabet: 9
+Number of examples: 5
+Number of bad transitions localized: 7
+SFT1 solving time: 549
+SFT2 solving time: 558
+First SFT:
+digraph {
+0 [label="0"];
+0 -> 0 [label="[&]/
+x -> "];
+0 -> 0 [label="[A]/
+x -> "];
+0 -> 0 [label="[\u0000-%\'-:=?-@B-fh-km-su-\uffff]/
+x -> "];
+0 -> 0 [label="[t]/
+x -> "];
+0 -> 0 [label="[g]/
+x -> "];
+0 -> 0 [label="[>]/
+x -> x + -24x + 41x + 54x + -3"];
+0 -> 0 [label="[l]/
+x -> "];
+0 -> 0 [label="[<]/
+x -> x + -22x + 48x + 56x + -1"];
+0 -> 0 [label="[;]/
+x -> "];
+}
+First SFT restricted:
+digraph {
+0 [label="0", peripheries = 2];
+0 -> 0 [label="[t]/
+x -> "];
+0 -> 0 [label="[>]/
+x -> x + -24x + 41x + 54x + -3"];
+0 -> 0 [label="[<]/
+x -> x + -22x + 48x + 56x + -1"];
+0 -> 0 [label="[&]/
+x -> "];
+0 -> 0 [label="[;]/
+x -> "];
+0 -> 0 [label="[l]/
+x -> "];
+0 -> 0 [label="[g]/
+x -> "];
+0 -> 0 [label="[A]/
+x -> "];
+0 -> 0 [label="[\u0000-%\'-:=?-@B-fh-km-su-\uffff]/
+x -> "];
+}
+Synthesis time: 642
+Equivalent results
+

@@ -1,0 +1,10 @@
+normalizeSpaces
+normalizeSpaces statistics:
+States in source: 7
+States in target: 6
+Transitions in source: 13
+Transitions in target: 10
+Transitions in sourceFinite: 19
+Transitions in targetFinite: 10
+Size of alphabet: 3
+Number of examples: 2
