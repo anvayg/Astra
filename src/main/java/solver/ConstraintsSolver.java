@@ -68,12 +68,17 @@ public class ConstraintsSolver {
 	BitVecSort BVTarget;
 	BitVecSort BVAut;
 	BitVecSort BVAlphabet;
+	BitVecSort BVOutput;
 	Sort B;
 	
 	BitVecExpr numStatesInt;
 	BitVecExpr numLookaheadStatesInt;
 	BitVecExpr alphabetSize;
-	BitVecExpr zero;
+	BitVecExpr zeroSource;
+	BitVecExpr zeroTarget;
+	BitVecExpr zeroAut;
+	BitVecExpr zeroAlphabet;
+	BitVecExpr zeroOutput;
 	BitVecExpr bound;
 	
 	FuncDecl<BitVecSort> d1;
@@ -741,111 +746,118 @@ public class ConstraintsSolver {
 		BVTarget = ctx.mkBitVecSort(neededBits(target.stateCount()));	// Target bit-vec size
 		BVAut = ctx.mkBitVecSort(neededBits(numStates));		// Transducer bit-vec size
 		BVAlphabet = ctx.mkBitVecSort(neededBits(alphabetMap.size()));	// Alphabet bit-vec size
-		// Add one for outputBound too?
+		BVOutput = ctx.mkBitVecSort(neededBits(outputBound));
 		
 		B = ctx.getBoolSort();
 		
 		/* some useful constants */
-		numStatesInt = (BitVecNum) ctx.mkNumeral(numStates, BV);
-		alphabetSize = (BitVecNum) ctx.mkNumeral(alphabetMap.size(), BV);
-		zero = (BitVecNum) ctx.mkNumeral(0, BV);
-		bound = (BitVecNum) ctx.mkNumeral(outputBound, BV);
+		numStatesInt = (BitVecNum) ctx.mkNumeral(numStates, BVAut);
+		alphabetSize = (BitVecNum) ctx.mkNumeral(alphabetMap.size(), BVAlphabet);
+		
+		// Zeros
+		zeroSource = (BitVecNum) ctx.mkNumeral(0, BVSource);
+		zeroTarget = (BitVecNum) ctx.mkNumeral(0, BVTarget);
+		zeroAut = (BitVecNum) ctx.mkNumeral(0, BVAut);
+		zeroAlphabet = (BitVecNum) ctx.mkNumeral(0, BVAlphabet);
+		zeroOutput = (BitVecNum) ctx.mkNumeral(0, BVOutput);
+		
+		bound = (BitVecNum) ctx.mkNumeral(outputBound, BVOutput);
 		
 		/* d_R: transition relation of source */
-		Sort[] argsToDR = new Sort[]{ BV, BV };
-		dR = ctx.mkFuncDecl("dR", argsToDR, BV);
+		Sort[] argsToDR = new Sort[]{ BVSource, BVAlphabet };
+		dR = ctx.mkFuncDecl("dR", argsToDR, BVSource);
 		
 		/* encode d_R */
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (SFAMove<CharPred, Character> transition : sourceTransitions) {
 			Integer stateFrom = transition.from;
-			BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+			BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
 			
 			Character move = transition.getWitness(ba); // there should only be 1
-			BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+			BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 			
 			Integer stateTo = transition.to;
-			BitVecExpr q2 = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+			BitVecExpr q2 = (BitVecNum) ctx.mkNumeral(stateTo, BVSource);
 			
 			Expr<BitVecSort> dexp = dR.apply(q1, a);
 			solver.add(ctx.mkEq(dexp, q2));
 		}
 		
 		/* d_T: transition relation of target */
-		Sort[] argsToDT = new Sort[]{ BV, BV };
-		dT = ctx.mkFuncDecl("dT", argsToDT, BV);
+		Sort[] argsToDT = new Sort[]{ BVTarget, BVAlphabet };
+		dT = ctx.mkFuncDecl("dT", argsToDT, BVTarget);
 		
 		/* encode d_T */
 		Collection<SFAMove<CharPred, Character>> targetTransitions = target.getTransitions();
 		for (SFAMove<CharPred, Character> transition : targetTransitions) {
 			Integer stateFrom = transition.from;
-			BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
+			BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BVTarget);
 			
 			Character move = transition.getWitness(ba); // there should only be 1
-			BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+			BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 			
 			Integer stateTo = transition.to;
-			BitVecExpr q2 = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+			BitVecExpr q2 = (BitVecNum) ctx.mkNumeral(stateTo, BVTarget);
 			
 			Expr<BitVecSort> dexp = dT.apply(q1, a);
 			solver.add(ctx.mkEq(dexp, q2));
 		}
 		
 		/* declare f_R : Q -> {0, 1} */
-		f_R = ctx.mkFuncDecl("f_R", BV, B);
+		f_R = ctx.mkFuncDecl("f_R", BVSource, B);
 		for (Integer sourceState : source.getStates()) {
-			BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
+			BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(sourceState, BVSource);
 			Expr c = f_R.apply(stateInt);
 			if (!source.isFinalState(sourceState)) c = ctx.mkNot(c);
 			solver.add(c);
 		}
 		
 		/* declare f_T : Q -> {0, 1} */
-		f_T = ctx.mkFuncDecl("f_T", BV, B);
+		f_T = ctx.mkFuncDecl("f_T", BVTarget, B);
 		for (Integer targetState : target.getStates()) {
-			BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+			BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(targetState, BVTarget);
 			Expr c = f_T.apply(stateInt);
 			if (!target.isFinalState(targetState)) c = ctx.mkNot(c);
 			solver.add(c);
 		}
 		
-		/* declare d_1:  */
-		Sort[] argsToD1 = new Sort[]{ BV, BV, BV };
-		d1 = ctx.mkFuncDecl("d1", argsToD1, BV);
+		/* declare d_1: Q x \Sigma x Z (output) -> \Sigma */
+		Sort[] argsToD1 = new Sort[]{ BVAut, BVAlphabet, BVOutput };
+		d1 = ctx.mkFuncDecl("d1", argsToD1, BVAlphabet);
 		
-		/* declare out_len */
-		Sort[] argsToOutLen = new Sort[]{ BV, BV };
-		out_len = ctx.mkFuncDecl("out_len", argsToOutLen, BV);
+		/* declare out_len : Q x \Sigma -> Z (output) */
+		Sort[] argsToOutLen = new Sort[]{ BVAut, BVAlphabet };
+		out_len = ctx.mkFuncDecl("out_len", argsToOutLen, BVOutput);
 		
 		/* declare d_2 : Q x \Sigma -> Q */
-		Sort[] argsToD2 = new Sort[]{ BV, BV };
-		d2 = ctx.mkFuncDecl("d2", argsToD2, BV);
+		Sort[] argsToD2 = new Sort[]{ BVAut, BVAlphabet };
+		d2 = ctx.mkFuncDecl("d2", argsToD2, BVAut);
 		
 		/* restrict range of d_1, d_2 and out_len */
 		for (int i = 0; i < numStates; i++) {	// q 
-			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 			
 			for (int move : alphabetMap.values())  {
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BVAlphabet);
 				
 				/* 0 <= out_len(q, a) <= l */
 				Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
-				solver.add(ctx.mkBVSLE(zero, outLenExpr));
+				solver.add(ctx.mkBVSLE(zeroOutput, outLenExpr));
 				solver.add(ctx.mkBVSLE(outLenExpr, bound));
 				
 				/* make variable q' = d2(q, a) */
 				Expr<BitVecSort> qPrime = d2.apply(q, a);
 				
 				/* 0 <= qPrime < numStates; range only needs to be encoded once */
-				solver.add(ctx.mkBVSLE(zero, qPrime));
+				solver.add(ctx.mkBVSLE(zeroAut, qPrime));
 				solver.add(ctx.mkBVSLT(qPrime, numStatesInt));
 				
 				for (int l = 0; l < outputBound; l++) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 					Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 					
 					/* 0 <= d1(q, a, index) < alphabetSize */
-					solver.add(ctx.mkBVSLE(zero, d1exp));
+					solver.add(ctx.mkBVSLE(zeroAlphabet, d1exp));
 					solver.add(ctx.mkBVSLT(d1exp, alphabetSize)); 
 				}
 			}
@@ -853,16 +865,16 @@ public class ConstraintsSolver {
 
 		
 		/* declare x : Q_R x Q x Q_T -> {1, 0} */
-		Sort[] argsToX = new Sort[]{ BV, BV, BV };
+		Sort[] argsToX = new Sort[]{ BVSource, BVAut, BVTarget };
 		x = ctx.mkFuncDecl("x", argsToX, B);
 		
 		/* declare edit-dist: Q x \Sigma -> Z */
-		Sort[] argsToEd = new Sort[]{ BV, BV };
-		edDist = ctx.mkFuncDecl("ed_dist", argsToEd, BV);
+		Sort[] argsToEd = new Sort[]{ BVAut, BVAlphabet };
+		edDist = ctx.mkFuncDecl("ed_dist", argsToEd, BVOutput);
 		
 		/* declare C: Q_R x Q x Q_T -> Z */
-		Sort[] argsToC = new Sort[]{ BV, BV, BV };
-		energy = ctx.mkFuncDecl("C", argsToC, BV);
+		Sort[] argsToC = new Sort[]{ BVSource, BVAut, BVTarget };
+		energy = ctx.mkFuncDecl("C", argsToC, BV); // Add a fixed BV
 		
 		
 		this.pair = ctx.mkTupleSort(ctx.mkSymbol("mkPair"), // name of tuple constructor
