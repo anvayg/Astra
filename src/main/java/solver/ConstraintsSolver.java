@@ -64,7 +64,10 @@ public class ConstraintsSolver {
 	BooleanAlgebraSubst<CharPred, CharFunc, Character> ba;
 	
 	/* Sorts and FuncDecls */
-	BitVecSort BV;
+	BitVecSort BVSource;
+	BitVecSort BVTarget;
+	BitVecSort BVAut;
+	BitVecSort BVAlphabet;
 	Sort B;
 	
 	BitVecExpr numStatesInt;
@@ -150,6 +153,11 @@ public class ConstraintsSolver {
 		}
 		
 		return arr;
+	}
+	
+	/* Compute bit-vector size */
+	public static int neededBits(int size) {
+		return Math.max((int) Math.ceil((Math.log(size) / Math.log(2))),1);
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -729,7 +737,12 @@ public class ConstraintsSolver {
 		}
 		
 		/* bit-vec and bool sorts */
-		BV = ctx.mkBitVecSort(8);
+		BVSource = ctx.mkBitVecSort(neededBits(source.stateCount())); 	// Source bit-vec size
+		BVTarget = ctx.mkBitVecSort(neededBits(target.stateCount()));	// Target bit-vec size
+		BVAut = ctx.mkBitVecSort(neededBits(numStates));		// Transducer bit-vec size
+		BVAlphabet = ctx.mkBitVecSort(neededBits(alphabetMap.size()));	// Alphabet bit-vec size
+		// Add one for outputBound too?
+		
 		B = ctx.getBoolSort();
 		
 		/* some useful constants */
