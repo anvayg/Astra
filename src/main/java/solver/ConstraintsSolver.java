@@ -69,6 +69,8 @@ public class ConstraintsSolver {
 	BitVecSort BVAut;
 	BitVecSort BVAlphabet;
 	BitVecSort BVOutput;
+	BitVecSort BVFixed;
+	BitVecSort BVDist;
 	Sort B;
 	
 	BitVecExpr numStatesInt;
@@ -79,6 +81,8 @@ public class ConstraintsSolver {
 	BitVecExpr zeroAut;
 	BitVecExpr zeroAlphabet;
 	BitVecExpr zeroOutput;
+	BitVecExpr zeroFixed;
+	
 	BitVecExpr bound;
 	
 	FuncDecl<BitVecSort> d1;
@@ -169,20 +173,20 @@ public class ConstraintsSolver {
 	public void encodeTypes() throws TimeoutException {
 		
 		/* initial states: x(q^0_R, q^0, q^0_T) */
-		BitVecExpr sourceInit = (BitVecNum) ctx.mkNumeral(source.getInitialState(), BV);
-		BitVecExpr targetInit = (BitVecNum) ctx.mkNumeral(target.getInitialState(), BV);
-		Expr res = x.apply(sourceInit, zero, targetInit);
+		BitVecExpr sourceInit = (BitVecNum) ctx.mkNumeral(source.getInitialState(), BVSource);
+		BitVecExpr targetInit = (BitVecNum) ctx.mkNumeral(target.getInitialState(), BVTarget);
+		Expr res = x.apply(sourceInit, zeroAut, targetInit);
 		solver.add(res);
 		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q
-			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 				Integer stateFrom = sourceTransition.from;
 				Character move = sourceTransition.getWitness(ba);
-				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 				
 				/* out_len(q, a) */
 				Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
@@ -201,13 +205,13 @@ public class ConstraintsSolver {
 				Expr[] outputChars = new Expr[outputBound];
 				
 				for (int l = 0; l < outputBound; l++) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 					Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp; 
 				}
 				
 				for (Integer targetFrom : target.getStates()) {
-					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
+					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BVTarget);
 					
 					
 					/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
@@ -227,7 +231,7 @@ public class ConstraintsSolver {
 					/* expressions for implications: out_len(q, a) = 0 ==> x(qR', q', qT) */
 					
 					/* special case for 0 */
-					Expr lenEq = ctx.mkEq(outLenExpr, zero);
+					Expr lenEq = ctx.mkEq(outLenExpr, zeroOutput);
 					Expr xExprPrime = x.apply(qRPrime, qPrime, qT);
 					
 					Expr c = ctx.mkImplies(lenEq, xExprPrime);
@@ -237,7 +241,7 @@ public class ConstraintsSolver {
 					Expr consequent = c;
 					for (int l = 0; l < outputBound; l++) {
 						int outputLength = l + 1;
-						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BV));
+						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BVOutput));
 						xExprPrime = x.apply(qRPrime, qPrime, dstStates[l]);
 						
 						c = ctx.mkImplies(lenEq, xExprPrime);
@@ -254,9 +258,9 @@ public class ConstraintsSolver {
 		for (int i = 0; i < numStates; i++) {
 			for (Integer sourceState : source.getStates()) {
 				for (Integer targetState : target.getStates()) {
-					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
-					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BV);
-					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BVSource);
+					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BVAut);
+					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BVTarget);
 					
 					Expr xExpr = x.apply(sourceInt, stateInt, targetInt);
 					Expr fRExp = f_R.apply(sourceInt);
@@ -276,20 +280,20 @@ public class ConstraintsSolver {
 	public void encodeDistanceBounded() throws TimeoutException {
 		/* In this case, the fraction must be a whole number (it should have denominator 1) */
 		int numEdits = distance[0];
-		BitVecExpr editsBound = (BitVecNum) ctx.mkNumeral(numEdits, BV);
+		BitVecExpr editsBound = (BitVecNum) ctx.mkNumeral(numEdits, BVOutput);
 		
 		/* C(q^0_R, q^0, q^0_T) = numEdits */
-		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), editsBound));
+		solver.add(ctx.mkEq(energy.apply(zeroSource, zeroAut, zeroTarget), editsBound));
 		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q 
-			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 				Integer stateFrom = sourceTransition.from;
 				Character move = sourceTransition.getWitness(ba);
-				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 				
 				/* out_len(q, a) */
 				Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
@@ -308,7 +312,7 @@ public class ConstraintsSolver {
 				Expr[] outputChars = new Expr[outputBound];
 				
 				for (int l = 0; l < outputBound; l++) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 					Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp; 
 				}
@@ -317,7 +321,7 @@ public class ConstraintsSolver {
 				Expr<BitVecSort> edDistExpr = edDist.apply(q, a);
 				
 				for (Integer targetFrom : target.getStates()) {
-					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
+					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BVTarget);
 					
 					
 					/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
@@ -334,7 +338,7 @@ public class ConstraintsSolver {
 					Expr<BitVecSort> cExpr = energy.apply(qR, q, qT);
 					
 					/* special case for 0 */
-					Expr lenEq = ctx.mkEq(outLenExpr, zero);
+					Expr lenEq = ctx.mkEq(outLenExpr, zeroOutput);
 					
 					/* C(qRPrime, qPrime, qT) = C(q_R, q, q_T) - ed_dist(q, a) */
 					Expr<BitVecSort> cExprPrime = energy.apply(qRPrime, qPrime, qT);
@@ -347,7 +351,7 @@ public class ConstraintsSolver {
 					/* loop for the rest */
 					for (int l = 0; l < outputBound; l++) {
 						int outputLength = l + 1;
-						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BV));
+						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BVOutput));
 						
 						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
 						cNewExpr = ctx.mkEq(cExprPrime, ctx.mkBVSub(cExpr, edDistExpr));
@@ -363,12 +367,12 @@ public class ConstraintsSolver {
 		for (int i = 0; i < numStates; i++) {
 			for (Integer sourceState : source.getStates()) {
 				for (Integer targetState : target.getStates()) {
-					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
-					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BV);
-					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BVSource);
+					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BVAut);
+					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BVTarget);
 										
 					Expr<BitVecSort> cExpr = energy.apply(sourceInt, stateInt, targetInt);
-					Expr cGreaterExp = ctx.mkBVSGE(cExpr, zero);
+					Expr cGreaterExp = ctx.mkBVSGE(cExpr, zeroFixed);
 					solver.add(cGreaterExp);
 				}
 			}
@@ -379,17 +383,17 @@ public class ConstraintsSolver {
 	public void encodeDistanceMean() throws TimeoutException {
 		
 		/* C(q^0_R, q^0, q^0_T) = 0 */
-		solver.add(ctx.mkEq(energy.apply(zero, zero, zero), zero));
+		solver.add(ctx.mkEq(energy.apply(zeroSource, zeroAut, zeroTarget), zeroFixed));
 		
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q 
-			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 				Integer stateFrom = sourceTransition.from;
 				Character move = sourceTransition.getWitness(ba);
-				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 				
 				/* out_len(q, a) */
 				Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
@@ -408,7 +412,7 @@ public class ConstraintsSolver {
 				Expr[] outputChars = new Expr[outputBound];
 				
 				for (int l = 0; l < outputBound; l++) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 					Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp; 
 				}
@@ -417,12 +421,12 @@ public class ConstraintsSolver {
 				Expr<BitVecSort> edDistExpr = edDist.apply(q, a);
 				
 				/* m - (n x ed_dist(q, a)) */
-				BitVecExpr m = (BitVecNum) ctx.mkNumeral(distance[0], BV); 
-				BitVecExpr n = (BitVecNum) ctx.mkNumeral(distance[1], BV);
+				BitVecExpr m = (BitVecNum) ctx.mkNumeral(distance[0], BVDist); 
+				BitVecExpr n = (BitVecNum) ctx.mkNumeral(distance[1], BVDist);
 				BitVecExpr diff = ctx.mkBVSub(m, ctx.mkBVMul(n, edDistExpr));
 				
 				for (Integer targetFrom : target.getStates()) {
-					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
+					BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BVTarget);
 					
 					
 					/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
@@ -442,7 +446,7 @@ public class ConstraintsSolver {
 					 * C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
 					
 					/* special case for 0 */
-					Expr lenEq = ctx.mkEq(outLenExpr, zero);
+					Expr lenEq = ctx.mkEq(outLenExpr, zeroOutput);
 					
 					/* C(q_R, q, q_T) >= C(qRPrime, qPrime, qT) - diff */
 					Expr<BitVecSort> cExprPrime = energy.apply(qRPrime, qPrime, qT);
@@ -455,7 +459,7 @@ public class ConstraintsSolver {
 					/* loop for the rest */
 					for (int l = 0; l < outputBound; l++) {
 						int outputLength = l + 1;
-						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BV));
+						lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputLength, BVOutput));
 						
 						cExprPrime = energy.apply(qRPrime, qPrime, dstStates[l]);
 						cGreaterExpr = ctx.mkBVSGE(cExpr, ctx.mkBVSub(cExprPrime, diff));
@@ -472,16 +476,16 @@ public class ConstraintsSolver {
 		for (int i = 0; i < numStates; i++) {
 			for (Integer sourceState : source.getStates()) {
 				for (Integer targetState : target.getStates()) {
-					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
-					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BV);
-					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+					BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BVSource);
+					BitVecExpr stateInt = (BitVecNum) ctx.mkNumeral(i, BVAut);
+					BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BVTarget);
 					
 					Expr xExpr = x.apply(sourceInt, stateInt, targetInt);
 					Expr fRExp = f_R.apply(sourceInt);
 					Expr antecedent = ctx.mkAnd(xExpr, fRExp);
 					
 					Expr<BitVecSort> cExpr = energy.apply(sourceInt, stateInt, targetInt);
-					Expr cGreaterExp = ctx.mkBVSGE(cExpr, zero);
+					Expr cGreaterExp = ctx.mkBVSGE(cExpr, zeroFixed);
 					Expr consequent = cGreaterExp;
 					
 					Expr c = ctx.mkImplies(antecedent, consequent);
@@ -501,13 +505,13 @@ public class ConstraintsSolver {
 		/* edit-distance constraints of individual transitions */
 		Collection<SFAMove<CharPred, Character>> sourceTransitions = source.getTransitions();
 		for (int i = 0; i < numStates; i++) {	// q 
-			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+			BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 				
 			for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 				Integer stateFrom = sourceTransition.from;
 				Character move = sourceTransition.getWitness(ba);
-				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+				BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 				
 				/* make variable out_len(q, a) */
 				Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
@@ -524,7 +528,7 @@ public class ConstraintsSolver {
 				Expr disjunct = ctx.mkFalse();
 				
 				for (int l = 0; l < outputBound; l++) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 					Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 					outputChars[l] = d1exp;
 					Expr lt = ctx.mkBVSLT(index, outLenExpr);
@@ -536,13 +540,13 @@ public class ConstraintsSolver {
 				Expr negDisjunct = ctx.mkNot(disjunct);
 				
 				/* (k = 0) ==> ed_dist(q, a) = 1 */
-				Expr lenEq = ctx.mkEq(outLenExpr, zero);
-				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkNumeral(1, BV));
+				Expr lenEq = ctx.mkEq(outLenExpr, zeroOutput);
+				Expr edDistEqOne = ctx.mkEq(edDistExpr, ctx.mkNumeral(1, BVOutput));
 				Expr impl1 = ctx.mkImplies(lenEq, edDistEqOne);
 				
 				/* \neg (k = 0) ==> ed_dist(q, a) = k - 1 */
 				Expr lenNotZero = ctx.mkNot(lenEq);
-				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkBVSub(outLenExpr, ctx.mkNumeral(1, BV))); 	
+				Expr edDistKMinus1 = ctx.mkEq(edDistExpr, ctx.mkBVSub(outLenExpr, ctx.mkNumeral(1, BVOutput))); 	
 				Expr impl2 = ctx.mkImplies(lenNotZero, edDistKMinus1);
 				
 				/* \neg (k = 0) ==> ed_dist(q, a) = k */
@@ -585,31 +589,31 @@ public class ConstraintsSolver {
 			int[] outputArr = stringToIntArray(alphabetMap, ioExample.second);
 			
 			/* declare function e_k: k x input_position -> (output_position, Q) */
-			Sort[] args = new Sort[] {BV};
+			Sort[] args = new Sort[] {BVFixed};
 			eFuncs[exampleCount] = ctx.mkFuncDecl("e " + String.valueOf(exampleCount), args, pair);
 			FuncDecl e = eFuncs[exampleCount];
 			
 			/* initial position : e_k(0) = (0, q_0) */
-			Expr initPair = pair.mkDecl().apply(zero, zero);
-			solver.add(ctx.mkEq(e.apply(zero), initPair));
+			Expr initPair = pair.mkDecl().apply(zeroFixed, zeroAut);
+			solver.add(ctx.mkEq(e.apply(zeroFixed), initPair));
 			
 			int inputLen = ioExample.first.length();
-			BitVecExpr inputLength = (BitVecNum) ctx.mkNumeral(inputLen, BV);
+			BitVecExpr inputLength = (BitVecNum) ctx.mkNumeral(inputLen, BVFixed);
 			int outputLen = ioExample.second.length();
-			BitVecExpr outputLength = (BitVecNum) ctx.mkNumeral(outputLen, BV);
+			BitVecExpr outputLength = (BitVecNum) ctx.mkNumeral(outputLen, BVFixed);
 			
 			/* 0 <= e_k(l1).first <= outputLen and 0 <= e_k(l1).second < numStates */
 			for (int l = 0; l <= inputLen; l++) {
-					Expr eExpr = e.apply((BitVecNum) ctx.mkNumeral(l, BV));
+					Expr eExpr = e.apply((BitVecNum) ctx.mkNumeral(l, BVFixed));
 					Expr<BitVecSort> eExprFirst = first.apply(eExpr);
 					Expr<BitVecSort> eExprSecond = second.apply(eExpr);
 					
 					/* restrict values of first */
-					solver.add(ctx.mkBVSLE(zero, eExprFirst));
+					solver.add(ctx.mkBVSLE(zeroFixed, eExprFirst));
 					solver.add(ctx.mkBVSLE(eExprFirst, outputLength));
 					
 					/* restrict values of second */
-					solver.add(ctx.mkBVSLE(zero, eExprSecond));
+					solver.add(ctx.mkBVSLE(zeroAut, eExprSecond));
 					solver.add(ctx.mkBVSLT(eExprSecond, numStatesInt));
 			}
 			
@@ -618,13 +622,13 @@ public class ConstraintsSolver {
 			solver.add(ctx.mkEq(eExprFirst, outputLength));
 			
 			for (int s = 0; s < numStates; s++) {	// q 
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(s, BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(s, BVAut);
 					
 				for (SFAMove<CharPred, Character> sourceTransition : sourceTransitions) {
 					Integer stateFrom = sourceTransition.from;
 					Character move = sourceTransition.getWitness(ba);
-					BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					BitVecExpr qR = (BitVecNum) ctx.mkNumeral(stateFrom, BVSource);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 					
 					/* out_len(q, a) */
 					Expr<BitVecSort> outLenExpr = out_len.apply(q, a);
@@ -643,14 +647,14 @@ public class ConstraintsSolver {
 					Expr[] outputChars = new Expr[outputBound];
 					
 					for (int l = 0; l < outputBound; l++) {
-						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 						Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 						outputChars[l] = d1exp;
 					}
 					
 					
 					for (Integer targetFrom : target.getStates()) {
-						BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BV);
+						BitVecExpr qT = (BitVecNum) ctx.mkNumeral(targetFrom, BVTarget);
 						
 						/* q1 = dT(qT, c0), q2 = dT(q1, c1), ..., q_l = dT(q_{l-1}, c_{l-1}) */
 						
@@ -665,16 +669,16 @@ public class ConstraintsSolver {
 						
 						for (int i = 0; i < inputLen; i++) { 	// rationale: always read an input character, it's fine to have transition that reads last input char, 
 							for (int j = 0; j <= outputLen; j++) {	// but output is already completely generated
-								BitVecExpr inputPosition = (BitVecNum) ctx.mkNumeral(i, BV);
-								BitVecExpr outputPosition = (BitVecNum) ctx.mkNumeral(j, BV);
+								BitVecExpr inputPosition = (BitVecNum) ctx.mkNumeral(i, BVFixed);
+								BitVecExpr outputPosition = (BitVecNum) ctx.mkNumeral(j, BVFixed);
 								
 								/* input[i+1] = a */
-								BitVecExpr nextInputPosition = (BitVecNum) ctx.mkNumeral(inputArr[i], BV);
+								BitVecExpr nextInputPosition = (BitVecNum) ctx.mkNumeral(inputArr[i], BVFixed);
 								Expr inputEq = ctx.mkEq(nextInputPosition, a);
 								
 								/* output needs be <= outputLen - j */
 								int possibleOutputLen = Math.min(outputLen - j, outputBound);
-								BitVecExpr possibleOutputLength = (BitVecNum) ctx.mkNumeral(possibleOutputLen, BV);
+								BitVecExpr possibleOutputLength = (BitVecNum) ctx.mkNumeral(possibleOutputLen, BVFixed);
 								
 								Expr outputLe = ctx.mkBVSLE(outLenExpr, possibleOutputLength);
 								
@@ -684,8 +688,8 @@ public class ConstraintsSolver {
 								/* expressions for implications: out_len(q, a) = 0 ==> e_k(i+1) = (j, q') */
 								
 								/* special case for 0 */
-								Expr lenEq = ctx.mkEq(outLenExpr, zero);
-								Expr eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BV)), pair.mkDecl().apply(outputPosition, qPrime));
+								Expr lenEq = ctx.mkEq(outLenExpr, zeroOutput);
+								Expr eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BVFixed)), pair.mkDecl().apply(outputPosition, qPrime));
 								
 								Expr c = ctx.mkImplies(lenEq, eExprPrime);
 								
@@ -693,15 +697,15 @@ public class ConstraintsSolver {
 								Expr consequent = ctx.mkAnd(outputLe, c);
 								for (int l = 0; l < possibleOutputLen; l++) { 
 									int outputGenLength = l + 1;
-									lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputGenLength, BV));
-									eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BV)), 
-											pair.mkDecl().apply((BitVecNum) ctx.mkNumeral(j + outputGenLength, BV), qPrime));
+									lenEq = ctx.mkEq(outLenExpr, (BitVecNum) ctx.mkNumeral(outputGenLength, BVOutput));
+									eExprPrime = ctx.mkEq(e.apply((BitVecNum) ctx.mkNumeral(i + 1, BVFixed)), 
+											pair.mkDecl().apply((BitVecNum) ctx.mkNumeral(j + outputGenLength, BVFixed), qPrime));
 									
 									/* equalities */
 									Expr stringEqualities = ctx.mkTrue();
 									for (int inc = 1; inc <= outputGenLength; inc++) {
 										int index = (j + inc) - 1;
-										BitVecExpr nextPosition = (BitVecNum) ctx.mkNumeral(outputArr[index], BV);
+										BitVecExpr nextPosition = (BitVecNum) ctx.mkNumeral(outputArr[index], BVFixed);
 										Expr eq = ctx.mkEq(nextPosition, outputChars[inc - 1]);
 										stringEqualities = ctx.mkAnd(stringEqualities, eq);
 									}
@@ -742,11 +746,13 @@ public class ConstraintsSolver {
 		}
 		
 		/* bit-vec and bool sorts */
-		BVSource = ctx.mkBitVecSort(neededBits(source.stateCount())); 	// Source bit-vec size
-		BVTarget = ctx.mkBitVecSort(neededBits(target.stateCount()));	// Target bit-vec size
-		BVAut = ctx.mkBitVecSort(neededBits(numStates));		// Transducer bit-vec size
-		BVAlphabet = ctx.mkBitVecSort(neededBits(alphabetMap.size()));	// Alphabet bit-vec size
-		BVOutput = ctx.mkBitVecSort(neededBits(outputBound));
+		BVSource = ctx.mkBitVecSort(neededBits(source.stateCount())); 		// Source bit-vec size
+		BVTarget = ctx.mkBitVecSort(neededBits(target.stateCount()));		// Target bit-vec size
+		BVAut = ctx.mkBitVecSort(neededBits(numStates));					// Transducer bit-vec size
+		BVAlphabet = ctx.mkBitVecSort(neededBits(alphabetMap.size()));		// Alphabet bit-vec size
+		BVOutput = ctx.mkBitVecSort(neededBits(outputBound));				// Output bound bit-vec size
+		BVDist = ctx.mkBitVecSort(neededBits(Math.max(distance[0], distance[1])));	// Dist bit-vec size
+		BVFixed = ctx.mkBitVecSort(neededBits(6));							// Fixed
 		
 		B = ctx.getBoolSort();
 		
@@ -760,6 +766,7 @@ public class ConstraintsSolver {
 		zeroAut = (BitVecNum) ctx.mkNumeral(0, BVAut);
 		zeroAlphabet = (BitVecNum) ctx.mkNumeral(0, BVAlphabet);
 		zeroOutput = (BitVecNum) ctx.mkNumeral(0, BVOutput);
+		zeroFixed = (BitVecNum) ctx.mkNumeral(0, BVFixed);
 		
 		bound = (BitVecNum) ctx.mkNumeral(outputBound, BVOutput);
 		
@@ -874,12 +881,12 @@ public class ConstraintsSolver {
 		
 		/* declare C: Q_R x Q x Q_T -> Z */
 		Sort[] argsToC = new Sort[]{ BVSource, BVAut, BVTarget };
-		energy = ctx.mkFuncDecl("C", argsToC, BV); // Add a fixed BV
+		energy = ctx.mkFuncDecl("C", argsToC, BVFixed); // Add a fixed BV
 		
 		
 		this.pair = ctx.mkTupleSort(ctx.mkSymbol("mkPair"), // name of tuple constructor
 				new Symbol[] { ctx.mkSymbol("first"), ctx.mkSymbol("second") }, // names of projection operators
-				new Sort[] { BV, BV } // types of projection operators
+				new Sort[] { BVAlphabet, BVAlphabet } // types of projection operators
 			);
 		this.first = (FuncDecl<BitVecSort>) pair.getFieldDecls()[0];	// projections
 		this.second = (FuncDecl<BitVecSort>) pair.getFieldDecls()[1];
@@ -931,17 +938,17 @@ public class ConstraintsSolver {
 			
 			/* Single-char minterm cannot output multiple-char minterm */
 			for (int i = 0; i < numStates; i++) {	// q 
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(i, BVAut);
 				
 				for (Character move : singleChars)  {
-					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 
 					for (int l = 0; l < outputBound; l++) {
-						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BV);
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(l, BVOutput);
 						Expr<BitVecSort> d1exp = d1.apply(q, a, index);
 
 						for (Character out : multipleChars) {
-							BitVecExpr b = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+							BitVecExpr b = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BVAlphabet);
 							solver.add(ctx.mkNot(ctx.mkEq(d1exp, b)));
 						}
 					}
@@ -962,9 +969,9 @@ public class ConstraintsSolver {
 				Character move = transition.getWitness(ba);
 				Integer stateTo = transition.to;
 				
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
-				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BVAut);
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
 			}
@@ -984,9 +991,9 @@ public class ConstraintsSolver {
 				Integer stateTo = transition.to;
 				
 				/* d2 */
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
-				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BVAlphabet);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BVAut);
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
 				
@@ -998,8 +1005,8 @@ public class ConstraintsSolver {
 				
 				int counter = 0;
 				for (Character out : outputs) {
-					BitVecExpr index = (BitVecNum) ctx.mkNumeral(counter, BV);
-					BitVecExpr outInt = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+					BitVecExpr index = (BitVecNum) ctx.mkNumeral(counter, BVOutput);
+					BitVecExpr outInt = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BVAlphabet);
 					
 					solver.add(ctx.mkEq(d1.apply(q, a, index), outInt));
 					
@@ -1015,9 +1022,9 @@ public class ConstraintsSolver {
 				Integer stateTo = transition.to;
 				
 				/* d2 */
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BV);
-				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(input), BVAlphabet);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BVAut);
 				
 				solver.add(ctx.mkEq(d2.apply(q, a), qPrime));
 			}
@@ -1033,10 +1040,10 @@ public class ConstraintsSolver {
 				Integer stateTo = transition.to;
 				List<CharFunc> outputFunc = transition.outputFunctions;
 				
-				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
-				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BV);
-				BitVecExpr outputLen = (BitVecNum) ctx.mkNumeral(outputFunc.size(), BV);
+				BitVecExpr q = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+				BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
+				BitVecExpr qPrime = (BitVecNum) ctx.mkNumeral(stateTo, BVAut);
+				BitVecExpr outputLen = (BitVecNum) ctx.mkNumeral(outputFunc.size(), BVOutput);
 				
 				/* d2exp */
 				Expr<BitVecSort> d2exp = d2.apply(q, a);
@@ -1051,9 +1058,9 @@ public class ConstraintsSolver {
 				for (CharFunc f : outputFunc) {
 					if (f != null && f instanceof CharConstant) { 	// all the CharFuncs should be constants
 						Character out = ((CharConstant)f).c;
-						BitVecExpr outMoveNum = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BV);
+						BitVecExpr outMoveNum = (BitVecNum) ctx.mkNumeral(alphabetMap.get(out), BVAlphabet);
 						
-						Expr<BitVecSort> d1exp = d1.apply(q, a, (BitVecNum) ctx.mkNumeral(index, BV));
+						Expr<BitVecSort> d1exp = d1.apply(q, a, (BitVecNum) ctx.mkNumeral(index, BVOutput));
 						negModel = ctx.mkAnd(negModel, ctx.mkEq(d1exp, outMoveNum));
 					}
 				}
@@ -1097,11 +1104,11 @@ public class ConstraintsSolver {
 				
 				/* d1 and d2 */	
 				for (int q1 = 0; q1 < numStates; q1++) {
-					BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BV);
+					BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BVAut);
 					
 					for (int move : alphabetMap.values())  { 
 						Character input = revAlphabetMap.get(move);
-						BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV); 
+						BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BVAlphabet); 
 						
 						/* get state to */
 						Expr<BitVecSort> d2exp = d2.apply(state, a);
@@ -1114,7 +1121,7 @@ public class ConstraintsSolver {
 						/* get output */
 						StringBuilder outputStr = new StringBuilder("");
 						for (int i = 0; i < outputLen; i++) {
-							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BVOutput);
 							Expr<BitVecSort> d1exp = d1.apply(state, a, index);
 							int outMove = ((BitVecNum) m.evaluate(d1exp, false)).getInt();
 							Character output = revAlphabetMap.get(outMove);
@@ -1135,9 +1142,9 @@ public class ConstraintsSolver {
 				for (int i = 0; i < numStates; i++) {
 					for (Integer sourceState : source.getStates()) {
 						for (Integer targetState : target.getStates()) {
-							BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BV);
-							BitVecNum stateInt = (BitVecNum) ctx.mkNumeral(i, BV);
-							BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BV);
+							BitVecExpr sourceInt = (BitVecNum) ctx.mkNumeral(sourceState, BVSource);
+							BitVecNum stateInt = (BitVecNum) ctx.mkNumeral(i, BVAut);
+							BitVecExpr targetInt = (BitVecNum) ctx.mkNumeral(targetState, BVTarget);
 								
 							Expr exp1 = x.apply(sourceInt, stateInt, targetInt);
 							Expr<BitVecSort> exp2 = energy.apply(sourceInt, stateInt, targetInt);
@@ -1162,8 +1169,8 @@ public class ConstraintsSolver {
 					Character move = transition.getWitness(ba);
 					Integer stateTo = transition.to;
 					
-					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 					
 					/* output_len */
 					Expr<BitVecSort> outputLenExpr = out_len.apply(q1, a);
@@ -1173,7 +1180,7 @@ public class ConstraintsSolver {
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
-						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BVOutput);
 						Expr<BitVecSort> d1exp = d1.apply(q1, a, index);
 						BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
 						int outMove = outMoveNum.getInt();
@@ -1193,8 +1200,8 @@ public class ConstraintsSolver {
 					Integer stateTo = transition.to;
 					Character move = transition.input;
 					
-					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BV);
-					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BV);
+					BitVecExpr q1 = (BitVecNum) ctx.mkNumeral(stateFrom, BVAut);
+					BitVecExpr a = (BitVecNum) ctx.mkNumeral(alphabetMap.get(move), BVAlphabet);
 					
 					/* output_len */
 					Expr<BitVecSort> outputLenExpr = out_len.apply(q1, a);
@@ -1204,7 +1211,7 @@ public class ConstraintsSolver {
 					/* get output */
 					List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 					for (int i = 0; i < outputLen; i++) {
-						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+						BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BVOutput);
 						Expr<BitVecSort> d1exp = d1.apply(q1, a, index);
 						BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
 						int outMove = outMoveNum.getInt();
@@ -1220,8 +1227,8 @@ public class ConstraintsSolver {
 				for (int q1 = 0; q1 < numStates; q1++) {
 					for (int move : alphabetMap.values())  { 
 						Character input = revAlphabetMap.get(move);
-						BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BV);
-						BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BV); 
+						BitVecExpr state = (BitVecNum) ctx.mkNumeral(q1, BVAut);
+						BitVecExpr a = (BitVecNum) ctx.mkNumeral(move, BVAlphabet); 
 							
 						/* get state to */
 						Expr<BitVecSort> d2exp = d2.apply(state, a);
@@ -1236,7 +1243,7 @@ public class ConstraintsSolver {
 						/* get output */
 						List<CharFunc> outputFunc = new ArrayList<CharFunc>();
 						for (int i = 0; i < outputLen; i++) {
-							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BV);
+							BitVecExpr index = (BitVecNum) ctx.mkNumeral(i, BVOutput);
 							Expr<BitVecSort> d1exp = d1.apply(state, a, index);
 							BitVecNum outMoveNum = (BitVecNum) m.evaluate(d1exp, false);
 							int outMove = outMoveNum.getInt();
