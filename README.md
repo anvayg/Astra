@@ -1,7 +1,8 @@
 # Astra
 
 Astra stands for Automatic Synthesis for Transducers. It contains the implementation of the algorithm presented 
-in the FMCAD 22 paper Synthesizing Tranducers from Complex Specifications, as well as the experimental results.
+in the FMCAD 22 paper [Synthesizing Tranducers from Complex Specifications](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=kR6ogecAAAAJ&citation_for_view=kR6ogecAAAAJ:u-x6o8ySG0sC), 
+as well as the experimental results.
 
 ### Dependencies and Installation
 
